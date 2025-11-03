@@ -81,23 +81,15 @@ const AppContent: React.FC = () => {
     const resource = resources.find(r => r.id === resourceId);
     if (!resource) return;
 
-    // Step 1: Add the lead to the database.
+    // Step 1: Add the lead and increment download count.
     await api.addLead(resourceId, resource.title, leadData);
     
-    // Step 2: If the resource is not "Coming Soon" and has a file, trigger the download.
+    // Step 2: If the resource is not "Coming Soon" and has a file, open it in a new tab.
     if (!resource.isComingSoon && resource.fileUrl) {
-      // Create a temporary link element to trigger the download.
-      const link = document.createElement('a');
-      link.href = resource.fileUrl;
-      // Suggest a filename for the download.
-      link.setAttribute('download', resource.fileName || resource.title);
-      // Append to the document, click, and then remove.
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      window.open(resource.fileUrl, '_blank');
     }
     
-    // Step 3: Refetch data to update the UI (e.g., for the admin panel).
+    // Step 3: Refetch data to update the UI with the new download count.
     fetchData();
   };
 

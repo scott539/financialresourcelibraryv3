@@ -46,9 +46,12 @@ export const getResources = async (): Promise<Resource[]> => {
   return resourceList;
 };
 
-const uploadFile = async (fileDataUrl: string, path: string): Promise<string> => {
+const uploadFile = async (fileDataUrl: string, path: string, fileName: string): Promise<string> => {
     const storageRef = ref(storage, path);
-    await uploadString(storageRef, fileDataUrl, 'data_url');
+    const metadata = {
+        contentDisposition: `attachment; filename="${fileName}"`,
+    };
+    await uploadString(storageRef, fileDataUrl, 'data_url', metadata);
     return getDownloadURL(storageRef);
 };
 
@@ -57,13 +60,15 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
   let imageUrl = resourceData.imageUrl;
   if (imageUrl.startsWith('data:')) {
     const imagePath = `thumbnails/${new Date().getTime()}_${resourceData.title.replace(/\s+/g, '_')}`;
-    imageUrl = await uploadFile(imageUrl, imagePath);
+    // Image thumbnails don't need the download behavior, so we can use a simpler upload or pass an empty filename.
+    const tempImageName = `thumbnail_${Date.now()}`;
+    imageUrl = await uploadFile(imageUrl, imagePath, tempImageName);
   }
 
   let fileUrl = resourceData.fileUrl || '';
   if (fileUrl && fileUrl.startsWith('data:')) {
      const filePath = `files/${new Date().getTime()}_${resourceData.fileName}`;
-     fileUrl = await uploadFile(fileUrl, filePath);
+     fileUrl = await uploadFile(fileUrl, filePath, resourceData.fileName);
   }
 
   const docRef = await addDoc(collection(db, 'resources'), {
@@ -85,13 +90,14 @@ export const updateResource = async (updatedResource: Resource): Promise<Resourc
     // Handle image upload if it's a new data URL
     if (updatedResource.imageUrl.startsWith('data:')) {
         const imagePath = `thumbnails/${new Date().getTime()}_${updatedResource.title.replace(/\s+/g, '_')}`;
-        dataToUpdate.imageUrl = await uploadFile(updatedResource.imageUrl, imagePath);
+        const tempImageName = `thumbnail_${Date.now()}`;
+        dataToUpdate.imageUrl = await uploadFile(updatedResource.imageUrl, imagePath, tempImageName);
     }
 
     // Handle file upload if it's a new data URL
     if (updatedResource.fileUrl && updatedResource.fileUrl.startsWith('data:')) {
         const filePath = `files/${new Date().getTime()}_${updatedResource.fileName}`;
-        dataToUpdate.fileUrl = await uploadFile(updatedResource.fileUrl, filePath);
+        dataToUpdate.fileUrl = await uploadFile(updatedResource.fileUrl, filePath, updatedResource.fileName);
     }
 
     await updateDoc(resourceRef, dataToUpdate);
@@ -135,13 +141,27 @@ export const addLead = async (resourceId: string, resourceTitle: string, leadDat
         timestamp: new Date().toISOString()
     };
 
-    // Note: The downloadCount increment has been removed from this function.
-    // Originally, it was part of a transaction that also updated the resource document.
-    // However, this fails for non-authenticated users due to Firestore security rules,
-    // causing the form to hang in a "submitting" state.
-    // A robust back-end solution would use a Cloud Function triggered by new lead creation.
-    // For this client-only app, we will only create the lead to ensure the form submission succeeds.
+    // Step 1: Securely add the lead. This is the primary operation.
     const docRef = await addDoc(collection(db, 'leads'), newLead);
+
+    // Step 2: Increment the download count.
+    // With the updated security rules, this transaction should succeed for all users.
+    try {
+        const resourceRef = doc(db, 'resources', resourceId);
+        await runTransaction(db, async (transaction) => {
+            const resourceDoc = await transaction.get(resourceRef);
+            if (!resourceDoc.exists()) {
+                console.error("Resource not found for download count update.");
+                return;
+            }
+            const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
+            transaction.update(resourceRef, { downloadCount: newDownloadCount });
+        });
+    } catch (error) {
+        // This could fail due to network issues or if the transaction is contended.
+        // We log it for debugging but don't block the user experience.
+        console.error("Failed to update download count:", error);
+    }
 
     return { ...newLead, id: docRef.id };
 };
