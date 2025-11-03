@@ -1,0 +1,5 @@
+{
+  "name": "Financial Resource Library V3",
+  "description": "A web application that provides a library of financial resources, complete with a lead capture system and an admin dashboard for content management.",
+  "requestFramePermissions": []
+}
