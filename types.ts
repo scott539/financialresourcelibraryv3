@@ -60,6 +60,7 @@ export interface Lead {
   resourceId: string;
   resourceTitle?: string;
   timestamp: string;
+  hasConsented: boolean;
 }
 
 export const ALL_TAGS = Object.values(Tag);

@@ -67,7 +67,8 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
 
   let fileUrl = resourceData.fileUrl || '';
   if (fileUrl && fileUrl.startsWith('data:')) {
-     const filePath = `files/${new Date().getTime()}_${resourceData.fileName}`;
+     const uniqueFolderName = new Date().getTime();
+     const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
      fileUrl = await uploadFile(fileUrl, filePath, resourceData.fileName);
   }
 
@@ -96,7 +97,8 @@ export const updateResource = async (updatedResource: Resource): Promise<Resourc
 
     // Handle file upload if it's a new data URL
     if (updatedResource.fileUrl && updatedResource.fileUrl.startsWith('data:')) {
-        const filePath = `files/${new Date().getTime()}_${updatedResource.fileName}`;
+        const uniqueFolderName = new Date().getTime();
+        const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
         dataToUpdate.fileUrl = await uploadFile(updatedResource.fileUrl, filePath, updatedResource.fileName);
     }
 
@@ -133,7 +135,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     return leadList;
 }
 
-export const addLead = async (resourceId: string, resourceTitle: string, leadData: { firstName: string; email: string }): Promise<Lead> => {
+export const addLead = async (resourceId: string, resourceTitle: string, leadData: { firstName: string; email: string; hasConsented: boolean; }): Promise<Lead> => {
     const newLead: Omit<Lead, 'id'> = {
         ...leadData,
         resourceId,

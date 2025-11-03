@@ -4,7 +4,7 @@ import { Resource } from '../types';
 
 interface ResourcePageProps {
   resources: Resource[];
-  onDownload: (resourceId: string, lead: { firstName: string; email: string }) => Promise<void>;
+  onDownload: (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => Promise<void>;
 }
 
 const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) => {
@@ -13,6 +13,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
 
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
+  const [hasConsented, setHasConsented] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,18 +29,22 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !email.trim()) {
-      setError('Both fields are required.');
+      setError('All fields are required.');
       return;
     }
     if (!validateEmail(email)) {
       setError('Please enter a valid email address.');
       return;
     }
+    if (!hasConsented) {
+      setError('You must consent to our terms to proceed.');
+      return;
+    }
     
     setError('');
     setIsSubmitting(true);
     try {
-      const lead = { firstName, email };
+      const lead = { firstName, email, hasConsented };
       await onDownload(resource.id, lead);
       setIsSubmitted(true);
     } catch (err) {
@@ -90,7 +95,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
               disabled={isSubmitting}
             />
           </div>
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
             <input
               type="email"
@@ -102,8 +107,33 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
               disabled={isSubmitting}
             />
           </div>
+          <div className="mb-6">
+            <label htmlFor="consent" className="flex items-start space-x-3">
+              <input
+                id="consent"
+                name="consent"
+                type="checkbox"
+                checked={hasConsented}
+                onChange={(e) => setHasConsented(e.target.checked)}
+                className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary"
+                required
+                disabled={isSubmitting}
+              />
+              <span className="text-sm text-gray-600">
+                I consent to be added to the BiggerPockets Money email list. See our{' '}
+                <a
+                  href="http://BiggerPocketsMoney.com/Privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary-dark"
+                >
+                  Privacy Policy
+                </a>.
+              </span>
+            </label>
+          </div>
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          <button type="submit" className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition duration-300 disabled:opacity-50" disabled={isSubmitting}>
+          <button type="submit" className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition duration-300 disabled:opacity-50" disabled={isSubmitting || !hasConsented}>
             {isSubmitting ? 'Submitting...' : resource.isComingSoon ? 'Notify Me' : 'Download Now'}
           </button>
         </form>

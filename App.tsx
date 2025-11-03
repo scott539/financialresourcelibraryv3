@@ -77,7 +77,7 @@ const AppContent: React.FC = () => {
     return await api.updateCredentials(currentPass, newUser, newPass);
   };
 
-  const addLeadAndDownload = async (resourceId: string, leadData: { firstName: string; email: string }) => {
+  const addLeadAndDownload = async (resourceId: string, leadData: { firstName: string; email: string; hasConsented: boolean; }) => {
     const resource = resources.find(r => r.id === resourceId);
     if (!resource) return;
 
