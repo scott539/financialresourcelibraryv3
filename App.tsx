@@ -80,8 +80,25 @@ const AppContent: React.FC = () => {
   const addLeadAndDownload = async (resourceId: string, leadData: { firstName: string; email: string }) => {
     const resource = resources.find(r => r.id === resourceId);
     if (!resource) return;
+
+    // Step 1: Add the lead to the database.
     await api.addLead(resourceId, resource.title, leadData);
-    fetchData(); // Refetch to update download counts and leads
+    
+    // Step 2: If the resource is not "Coming Soon" and has a file, trigger the download.
+    if (!resource.isComingSoon && resource.fileUrl) {
+      // Create a temporary link element to trigger the download.
+      const link = document.createElement('a');
+      link.href = resource.fileUrl;
+      // Suggest a filename for the download.
+      link.setAttribute('download', resource.fileName || resource.title);
+      // Append to the document, click, and then remove.
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Step 3: Refetch data to update the UI (e.g., for the admin panel).
+    fetchData();
   };
 
   const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>) => {

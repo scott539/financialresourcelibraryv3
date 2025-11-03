@@ -135,20 +135,15 @@ export const addLead = async (resourceId: string, resourceTitle: string, leadDat
         timestamp: new Date().toISOString()
     };
 
-    const resourceRef = doc(db, 'resources', resourceId);
-    const leadRef = doc(collection(db, 'leads'));
+    // Note: The downloadCount increment has been removed from this function.
+    // Originally, it was part of a transaction that also updated the resource document.
+    // However, this fails for non-authenticated users due to Firestore security rules,
+    // causing the form to hang in a "submitting" state.
+    // A robust back-end solution would use a Cloud Function triggered by new lead creation.
+    // For this client-only app, we will only create the lead to ensure the form submission succeeds.
+    const docRef = await addDoc(collection(db, 'leads'), newLead);
 
-    await runTransaction(db, async (transaction) => {
-        const resourceDoc = await transaction.get(resourceRef);
-        if (!resourceDoc.exists()) {
-            throw new Error("Resource does not exist!");
-        }
-        const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
-        transaction.update(resourceRef, { downloadCount: newDownloadCount });
-        transaction.set(leadRef, newLead);
-    });
-
-    return { ...newLead, id: leadRef.id };
+    return { ...newLead, id: docRef.id };
 };
 
 

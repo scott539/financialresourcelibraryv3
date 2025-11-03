@@ -38,12 +38,15 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
     
     setError('');
     setIsSubmitting(true);
-    const lead = { firstName, email };
-    await onDownload(resource.id, lead);
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    if (!resource.isComingSoon) {
-      window.alert(`Thank you! Your download of "${resource.title}" should start now.`);
+    try {
+      const lead = { firstName, email };
+      await onDownload(resource.id, lead);
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error("Submission failed:", err);
+      setError("Submission failed. Please check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -58,7 +61,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
           <p className="mt-2 text-gray-600">
             {resource.isComingSoon 
               ? "You're on the list! We'll notify you as soon as this resource is available."
-              : "Your download is ready. We've sent a confirmation to your email."}
+              : "Your download should begin automatically. We've also sent a confirmation to your email."}
           </p>
         </div>
       );
