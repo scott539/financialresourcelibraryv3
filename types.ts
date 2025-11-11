@@ -42,7 +42,6 @@ export interface Resource {
   id: string;
   title: string;
   description: string;
-  longDescription: string;
   type: ResourceType;
   category: MainCategory;
   tags: Tag[];

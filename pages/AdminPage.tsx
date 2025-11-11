@@ -18,7 +18,6 @@ interface AdminPageProps {
 const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
   title: '',
   description: '',
-  longDescription: '',
   type: ResourceType.PDF,
   category: MainCategory.TOOLKIT,
   tags: [],
@@ -181,11 +180,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Short Description</label>
-                        <textarea name="description" value={formData.description} onChange={handleChange} rows={2} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Long Description</label>
-                        <textarea name="longDescription" value={formData.longDescription} onChange={handleChange} rows={4} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
+                        <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>

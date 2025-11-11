@@ -3,12 +3,14 @@ import { Resource, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
 import ResourceCard from '../components/ResourceCard';
+import { getSubscriberEmail } from '../utils/emailGate';
 
 interface HomePageProps {
   resources: Resource[];
+  onDownload: (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => Promise<void>;
 }
 
-const HomePage: React.FC<HomePageProps> = ({ resources }) => {
+const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
   const [activeTags, setActiveTags] = useState<Tag[]>([]);
@@ -45,6 +47,29 @@ const HomePage: React.FC<HomePageProps> = ({ resources }) => {
     setSearchTerm('');
   };
 
+  const handleDownloadClick = (resource: Resource) => {
+    const subscriberEmail = getSubscriberEmail();
+
+    if (resource.isComingSoon) {
+      if (subscriberEmail) {
+        const lead = { firstName: 'Subscriber', email: subscriberEmail, hasConsented: true };
+        onDownload(resource.id, lead);
+        alert("Thanks! You're on the list. We'll notify you when this resource is available.");
+      } else {
+        alert("Please sign up through our ConvertKit page to be notified when this resource is available.");
+      }
+      return;
+    }
+
+    if (subscriberEmail) {
+      const lead = { firstName: 'Subscriber', email: subscriberEmail, hasConsented: true };
+      onDownload(resource.id, lead);
+    } else {
+      alert("Please sign up through our ConvertKit page to download this resource.");
+    }
+  };
+
+
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center mb-8">
@@ -71,7 +96,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources }) => {
       {filteredResources.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredResources.map((resource) => (
-            <ResourceCard key={resource.id} resource={resource} />
+            <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} />
           ))}
         </div>
       ) : (

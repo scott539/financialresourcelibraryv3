@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, Link } from 'react-router-dom';
 import { Resource } from '../types';
+import { SUBSCRIBER_EMAIL_KEY, getSubscriberEmail, saveSubscriberEmail } from '../utils/emailGate';
+import { DownloadIcon } from '../components/icons';
 
 interface ResourcePageProps {
   resources: Resource[];
@@ -11,12 +13,15 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
   const { id } = useParams<{ id: string }>();
   const resource = resources.find(r => r.id === id);
 
+  const [subscriberEmail, setSubscriberEmail] = useState<string | null>(() => getSubscriberEmail());
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [hasConsented, setHasConsented] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
 
   if (!resource) {
     return <Navigate to="/" />;
@@ -46,6 +51,8 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
     try {
       const lead = { firstName, email, hasConsented };
       await onDownload(resource.id, lead);
+      saveSubscriberEmail(email);
+      setSubscriberEmail(email);
       setIsSubmitted(true);
     } catch (err) {
       console.error("Submission failed:", err);
@@ -54,6 +61,54 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
       setIsSubmitting(false);
     }
   };
+
+  const handleDirectDownload = async () => {
+    if (!subscriberEmail || !resource) return;
+    setIsDownloading(true);
+    setError('');
+    try {
+      // We don't have a first name, so we provide a default.
+      // Consent is implied by them having signed up on ConvertKit.
+      const lead = { firstName: 'Subscriber', email: subscriberEmail, hasConsented: true };
+      await onDownload(resource.id, lead);
+    } catch (err) {
+      console.error("Download failed:", err);
+      setError("Download failed. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const renderDirectDownload = () => (
+    <div className="text-center">
+      <h2 className="text-2xl font-bold text-slate mb-2">Welcome Back!</h2>
+      <p className="text-gray-600 mb-6">
+        You have unlocked this resource. Click below to get instant access.
+      </p>
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      <button 
+          onClick={handleDirectDownload}
+          disabled={isDownloading}
+          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition duration-300 disabled:opacity-50 flex items-center justify-center"
+      >
+          <DownloadIcon className="w-5 h-5 mr-2"/>
+          {isDownloading ? 'Downloading...' : `Download: ${resource?.title}`}
+      </button>
+      <p className="text-xs text-gray-500 mt-4">
+          Logged in as {subscriberEmail}. Not you?{' '}
+          <button 
+            onClick={() => { 
+              localStorage.removeItem(SUBSCRIBER_EMAIL_KEY); 
+              setSubscriberEmail(null); 
+              setError('');
+            }} 
+            className="underline text-primary hover:text-primary-dark"
+          >
+            Click here
+          </button>.
+      </p>
+    </div>
+  );
 
   const renderForm = () => {
     if (isSubmitted) {
@@ -121,14 +176,14 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
               />
               <span className="text-sm text-gray-600">
                 I consent to be added to the BiggerPockets Money email list. See our{' '}
-                <a
-                  href="http://BiggerPocketsMoney.com/Privacy"
+                <Link
+                  to="/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline hover:text-primary-dark"
                 >
                   Privacy Policy
-                </a>.
+                </Link>.
               </span>
             </label>
           </div>
@@ -164,7 +219,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
             </div>
           </div>
           <div className="bg-background-light p-8 rounded-lg shadow-lg sticky top-8">
-            {renderForm()}
+            {subscriberEmail ? renderDirectDownload() : renderForm()}
           </div>
         </div>
       </div>

@@ -5,13 +5,14 @@ import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import ResourcePage from './pages/ResourcePage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'; // Import the new page
 import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
+import { checkUrlForEmail } from './utils/emailGate';
 
 const AppContent: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -20,6 +21,10 @@ const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    checkUrlForEmail();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -124,9 +129,9 @@ const AppContent: React.FC = () => {
       <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       <main className="flex-grow pb-16 md:pb-0">
         <Routes>
-          <Route path="/" element={<HomePage resources={resources} />} />
-          <Route path="/resource/:id" element={<ResourcePage resources={resources} onDownload={addLeadAndDownload} />} />
+          <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} /> {/* Add new route */}
           <Route 
             path="/admin"
             element={

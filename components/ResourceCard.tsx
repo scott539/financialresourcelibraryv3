@@ -1,13 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
 import { PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, VideoIcon, AudioIcon, DownloadIcon } from './icons';
 
 interface ResourceCardProps {
   resource: Resource;
+  onDownloadClick: (resource: Resource) => void;
 }
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
+const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }) => {
   const { id, title, description, type, tags = [], imageUrl, downloadCount, isComingSoon } = resource;
 
   const getTypeIcon = () => {
@@ -32,7 +32,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
   };
 
   return (
-    <Link to={`/resource/${id}`} className="block group">
+    <div onClick={() => onDownloadClick(resource)} className="block group cursor-pointer h-full">
       <div className="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden h-full flex flex-col">
         <div className="relative">
           <img src={imageUrl} alt={title} className="w-full aspect-square object-cover" />
@@ -45,7 +45,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
             {(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : 'Downloads'}
           </div>
         </div>
-        <div className="p-4 pb-12 flex flex-col flex-grow">
+        <div className="p-4 pb-20 flex flex-col flex-grow">
           <div className="flex items-center text-sm text-gray-500 mb-1">
             {getTypeIcon()}
             <span>{type}</span>
@@ -65,11 +65,14 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
             )}
           </div>
         </div>
-        <div className="absolute bottom-4 right-4 bg-primary text-white p-2 rounded-full shadow-lg transform transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
-            <DownloadIcon className="w-5 h-5" />
+        <div className="absolute bottom-4 right-4">
+            <div className="bg-primary text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all duration-300 group-hover:bg-primary-dark group-hover:shadow-xl group-hover:scale-105 transform">
+                <DownloadIcon className="w-5 h-5" />
+                <span className="text-sm font-bold">Download</span>
+            </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 
