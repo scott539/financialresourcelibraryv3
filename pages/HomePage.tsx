@@ -3,7 +3,6 @@ import { Resource, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
 import ResourceCard from '../components/ResourceCard';
-import { getSubscriberEmail } from '../utils/emailGate';
 
 interface HomePageProps {
   resources: Resource[];
@@ -48,25 +47,21 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
   };
 
   const handleDownloadClick = (resource: Resource) => {
-    const subscriberEmail = getSubscriberEmail();
+    // Create an anonymous lead to track downloads without requiring user info.
+    const anonymousLead = { 
+      firstName: 'Anonymous', 
+      email: `anonymous-${Date.now()}@example.com`,
+      hasConsented: true 
+    };
 
     if (resource.isComingSoon) {
-      if (subscriberEmail) {
-        const lead = { firstName: 'Subscriber', email: subscriberEmail, hasConsented: true };
-        onDownload(resource.id, lead);
-        alert("Thanks! You're on the list. We'll notify you when this resource is available.");
-      } else {
-        alert("Please sign up through our ConvertKit page to be notified when this resource is available.");
-      }
+      onDownload(resource.id, anonymousLead);
+      alert("Thanks for registering your interest! We'll track demand for this resource.");
       return;
     }
 
-    if (subscriberEmail) {
-      const lead = { firstName: 'Subscriber', email: subscriberEmail, hasConsented: true };
-      onDownload(resource.id, lead);
-    } else {
-      alert("Please sign up through our ConvertKit page to download this resource.");
-    }
+    // For downloadable files, trigger the download process.
+    onDownload(resource.id, anonymousLead);
   };
 
 
