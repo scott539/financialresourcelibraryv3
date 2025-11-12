@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { Resource } from '../types';
-import { SUBSCRIBER_EMAIL_KEY, getSubscriberEmail, saveSubscriberEmail } from '../utils/emailGate';
+// The SUBSCRIBER_EMAIL_KEY is no longer used for writing but is kept for context.
+import { SUBSCRIBER_EMAIL_KEY, getSubscriberEmail/*, saveSubscriberEmail*/ } from '../utils/emailGate';
 import { DownloadIcon } from '../components/icons';
 
 interface ResourcePageProps {
@@ -13,13 +14,19 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
   const { id } = useParams<{ id: string }>();
   const resource = resources.find(r => r.id === id);
 
+  // The subscriberEmail will always be populated now, bypassing the form.
   const [subscriberEmail, setSubscriberEmail] = useState<string | null>(() => getSubscriberEmail());
+  
+  // State for the form is kept but commented out for potential future use.
+  /*
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [hasConsented, setHasConsented] = useState(false);
-  const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  */
+ 
+  const [error, setError] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
 
 
@@ -27,6 +34,8 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
     return <Navigate to="/" />;
   }
   
+  /*
+  // Form logic is commented out as the email gate is disabled.
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
@@ -61,6 +70,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
       setIsSubmitting(false);
     }
   };
+  */
 
   const handleDirectDownload = async () => {
     if (!subscriberEmail || !resource) return;
@@ -68,7 +78,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
     setError('');
     try {
       // We don't have a first name, so we provide a default.
-      // Consent is implied by them having signed up on ConvertKit.
+      // Consent is implied by the user having already passed the gate.
       const lead = { firstName: 'Subscriber', email: subscriberEmail, hasConsented: true };
       await onDownload(resource.id, lead);
     } catch (err) {
@@ -81,7 +91,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
 
   const renderDirectDownload = () => (
     <div className="text-center">
-      <h2 className="text-2xl font-bold text-slate mb-2">Welcome Back!</h2>
+      <h2 className="text-2xl font-bold text-slate mb-2">Welcome!</h2>
       <p className="text-gray-600 mb-6">
         You have unlocked this resource. Click below to get instant access.
       </p>
@@ -94,6 +104,8 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
           <DownloadIcon className="w-5 h-5 mr-2"/>
           {isDownloading ? 'Downloading...' : `Download: ${resource?.title}`}
       </button>
+      {/* The 'Not you?' link is hidden as the email is now a placeholder. */}
+      {/*
       <p className="text-xs text-gray-500 mt-4">
           Logged in as {subscriberEmail}. Not you?{' '}
           <button 
@@ -107,9 +119,12 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
             Click here
           </button>.
       </p>
+      */}
     </div>
   );
 
+  /*
+  // The form is no longer rendered.
   const renderForm = () => {
     if (isSubmitted) {
       return (
@@ -195,6 +210,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
       </>
     )
   }
+  */
 
   return (
     <div className="bg-white">
@@ -211,7 +227,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
                   </span>
                 ))}
             </div>
-            <p className="text-lg text-gray-600 leading-relaxed">{resource.longDescription}</p>
+            <p className="text-lg text-gray-600 leading-relaxed">{resource.description}</p>
             <div className="mt-6 flex items-center space-x-4 text-sm text-gray-500">
                 <span>Type: <strong>{resource.type}</strong></span>
                 <span>|</span>
@@ -219,7 +235,8 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
             </div>
           </div>
           <div className="bg-background-light p-8 rounded-lg shadow-lg sticky top-8">
-            {subscriberEmail ? renderDirectDownload() : renderForm()}
+            {/* Since the email gate is disabled, we always show the direct download option. */}
+            {renderDirectDownload()}
           </div>
         </div>
       </div>

@@ -23,7 +23,7 @@ const AppContent: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    checkUrlForEmail();
+    // checkUrlForEmail(); // Email gate is currently disabled.
   }, []);
 
   useEffect(() => {

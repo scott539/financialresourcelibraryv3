@@ -70,11 +70,15 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
       if (resource.isComingSoon) {
         alert("Thanks for registering your interest! We'll track demand for this resource.");
       }
-    } else {
+    } 
+    /*
+    // Email gate is currently disabled. All users are treated as subscribers.
+    else {
       // New user, open the modal to capture lead info.
       setSelectedResource(resource);
       setIsModalOpen(true);
     }
+    */
   };
 
   const handleModalClose = () => {

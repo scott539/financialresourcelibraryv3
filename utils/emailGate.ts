@@ -1,6 +1,7 @@
 export const SUBSCRIBER_EMAIL_KEY = 'financial_library_subscriber_email';
 
 // Basic email validation
+/*
 const isValidEmail = (email: string | null): boolean => {
   if (!email) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -40,4 +41,23 @@ export const checkUrlForEmail = (): void => {
             window.history.replaceState({}, document.title, cleanUrl);
         }
     }
+};
+*/
+
+
+// --- Simplified implementation to bypass email gate ---
+// All users are treated as subscribers.
+
+export const getSubscriberEmail = (): string => {
+  // Return a non-null string to signify the user has "subscribed"
+  return 'gated-subscriber@example.com';
+};
+
+// These functions are no longer needed but kept for potential future use.
+export const saveSubscriberEmail = (email: string): void => {
+  // No-op
+};
+
+export const checkUrlForEmail = (): void => {
+  // No-op
 };
