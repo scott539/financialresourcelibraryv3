@@ -102,6 +102,11 @@ const AppContent: React.FC = () => {
     fetchData();
   };
 
+  const handleGoogleDriveClick = async (resourceId: string) => {
+    await api.incrementResourceAccessCount(resourceId);
+    fetchData();
+  };
+
   const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>) => {
     await api.addResource(resourceData);
     fetchData();
@@ -133,7 +138,7 @@ const AppContent: React.FC = () => {
       <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       <main className="flex-grow pb-16 md:pb-0">
         <Routes>
-          <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} />} />
+          <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} /> {/* Add new route */}
           <Route 

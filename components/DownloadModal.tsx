@@ -9,9 +9,10 @@ interface DownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDownload: (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => Promise<void>;
+  onGoogleDriveClick: (resourceId: string) => void;
 }
 
-const DownloadModal: React.FC<DownloadModalProps> = ({ resource, isOpen, onClose, onDownload }) => {
+const DownloadModal: React.FC<DownloadModalProps> = ({ resource, isOpen, onClose, onDownload, onGoogleDriveClick }) => {
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [hasConsented, setHasConsented] = useState(false);
@@ -96,6 +97,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({ resource, isOpen, onClose
               href={resource.googleDriveUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => onGoogleDriveClick(resource.id)}
               className="w-full bg-white text-blue-600 font-bold py-2 px-4 rounded-md transition duration-300 hover:bg-blue-50 border border-gray-300 flex items-center justify-center gap-2"
             >
               <LinkIcon className="w-5 h-5" />

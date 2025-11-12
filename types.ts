@@ -1,3 +1,4 @@
+
 export enum ResourceType {
   PDF = 'PDF',
   SPREADSHEET = 'Spreadsheet',
@@ -52,6 +53,8 @@ export interface Resource {
   fileName: string;
   googleDriveUrl?: string;
   isHidden?: boolean;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface Lead {

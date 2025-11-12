@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Resource, ResourceType } from '../types';
 import { PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, VideoIcon, AudioIcon, DownloadIcon, LinkIcon } from './icons';
@@ -5,10 +6,24 @@ import { PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, Vi
 interface ResourceCardProps {
   resource: Resource;
   onDownloadClick: (resource: Resource) => void;
+  onGoogleDriveClick: (resourceId: string) => void;
 }
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }) => {
-  const { title, description, type, tags = [], imageUrl, downloadCount, isComingSoon, googleDriveUrl } = resource;
+const formatDate = (timestamp: any): string | null => {
+    // Firestore Timestamps have a toDate() method
+    if (!timestamp || typeof timestamp.toDate !== 'function') {
+        return null;
+    }
+    const date = timestamp.toDate();
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(date);
+};
+
+const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick, onGoogleDriveClick }) => {
+  const { title, description, type, tags = [], imageUrl, downloadCount, isComingSoon, googleDriveUrl, updatedAt } = resource;
   
   const [isExpanded, setIsExpanded] = useState(false);
   const descriptionLimit = 100;
@@ -17,6 +32,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
   const displayedDescription = isLongDescription && !isExpanded
     ? `${description.substring(0, descriptionLimit)}...`
     : description;
+
+  const lastUpdated = formatDate(updatedAt);
 
   const getTypeIcon = () => {
     switch (type) {
@@ -54,9 +71,14 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
           </div>
         </div>
         <div className="p-4 flex flex-col flex-grow">
-          <div className="flex items-center text-sm text-gray-500 mb-1">
-            {getTypeIcon()}
-            <span>{type}</span>
+          <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+            <div className="flex items-center">
+                {getTypeIcon()}
+                <span>{type}</span>
+            </div>
+            {lastUpdated && (
+                <span className="text-xs whitespace-nowrap">Updated {lastUpdated}</span>
+            )}
           </div>
           <h3 className="text-lg font-semibold text-slate mb-2 group-hover:text-primary transition-colors duration-300">{title}</h3>
           
@@ -95,7 +117,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
                 href={googleDriveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGoogleDriveClick(resource.id);
+                }}
                 className="w-full text-center bg-white text-blue-600 px-4 py-2 rounded-md shadow-sm flex items-center justify-center gap-2 transition-all duration-300 hover:bg-blue-50 border border-gray-300"
                 title="Open in Google Drive"
               >

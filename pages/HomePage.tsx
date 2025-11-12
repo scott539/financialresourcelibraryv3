@@ -10,9 +10,10 @@ import { getSubscriberEmail, saveSubscriberEmail } from '../utils/emailGate';
 interface HomePageProps {
   resources: Resource[];
   onDownload: (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => Promise<void>;
+  onGoogleDriveClick: (resourceId: string) => void;
 }
 
-const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
+const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriveClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
   const [activeTags, setActiveTags] = useState<Tag[]>([]);
@@ -113,7 +114,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
         {filteredResources.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredResources.map((resource) => (
-              <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} />
+              <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} onGoogleDriveClick={onGoogleDriveClick} />
             ))}
           </div>
         ) : (
@@ -129,6 +130,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         onDownload={handleModalDownload}
+        onGoogleDriveClick={onGoogleDriveClick}
       />
     </>
   );

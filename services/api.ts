@@ -168,6 +168,25 @@ export const addLead = async (resourceId: string, resourceTitle: string, leadDat
     return { ...newLead, id: docRef.id };
 };
 
+export const incrementResourceAccessCount = async (resourceId: string): Promise<void> => {
+    try {
+        const resourceRef = doc(db, 'resources', resourceId);
+        await runTransaction(db, async (transaction) => {
+            const resourceDoc = await transaction.get(resourceRef);
+            if (!resourceDoc.exists()) {
+                console.error("Resource not found for download count update.");
+                return;
+            }
+            const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
+            transaction.update(resourceRef, { downloadCount: newDownloadCount });
+        });
+    } catch (error) {
+        // This could fail due to network issues or if the transaction is contended.
+        // We log it for debugging but don't block the user from opening the link.
+        console.error("Failed to update download count for Google Drive access:", error);
+    }
+};
+
 
 // --- Auth API ---
 
