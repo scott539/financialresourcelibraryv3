@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Resource } from '../types';
 import { saveSubscriberEmail } from '../utils/emailGate';
+import { LinkIcon } from './icons';
 
 interface DownloadModalProps {
   resource: Resource | null;
@@ -83,12 +84,25 @@ const DownloadModal: React.FC<DownloadModalProps> = ({ resource, isOpen, onClose
           ? "You're on the list! We'll notify you as soon as this resource is available."
           : "Your download should begin automatically. We've also sent a confirmation to your email."}
       </p>
-      <button 
-        onClick={onClose} 
-        className="mt-6 w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-md transition duration-300"
-      >
-        Close
-      </button>
+      <div className="mt-6 flex flex-col sm:flex-row-reverse gap-3">
+        <button 
+          onClick={onClose} 
+          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-md transition duration-300"
+        >
+          Close
+        </button>
+        {resource.googleDriveUrl && (
+            <a
+              href={resource.googleDriveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-gray-100 text-slate font-bold py-2 px-4 rounded-md transition duration-300 hover:bg-gray-200 flex items-center justify-center gap-2"
+            >
+              <LinkIcon className="w-5 h-5" />
+              Open in Drive
+            </a>
+          )}
+      </div>
     </div>
   );
 

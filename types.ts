@@ -50,6 +50,7 @@ export interface Resource {
   isComingSoon: boolean;
   fileUrl: string;
   fileName: string;
+  googleDriveUrl?: string;
 }
 
 export interface Lead {

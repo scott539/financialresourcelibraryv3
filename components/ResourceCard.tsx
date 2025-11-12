@@ -1,6 +1,6 @@
 import React from 'react';
 import { Resource, ResourceType } from '../types';
-import { PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, VideoIcon, AudioIcon, DownloadIcon } from './icons';
+import { PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, VideoIcon, AudioIcon, DownloadIcon, LinkIcon } from './icons';
 
 interface ResourceCardProps {
   resource: Resource;
@@ -8,7 +8,7 @@ interface ResourceCardProps {
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }) => {
-  const { id, title, description, type, tags = [], imageUrl, downloadCount, isComingSoon } = resource;
+  const { id, title, description, type, tags = [], imageUrl, downloadCount, isComingSoon, googleDriveUrl } = resource;
 
   const getTypeIcon = () => {
     switch (type) {
@@ -32,7 +32,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
   };
 
   return (
-    <div onClick={() => onDownloadClick(resource)} className="block group cursor-pointer h-full">
+    <div className="block group h-full">
       <div className="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden h-full flex flex-col">
         <div className="relative">
           <img src={imageUrl} alt={title} className="w-full aspect-square object-cover" />
@@ -65,11 +65,28 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
             )}
           </div>
         </div>
-        <div className="absolute bottom-4 right-4">
-            <div className="bg-primary text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all duration-300 group-hover:bg-primary-dark group-hover:shadow-xl group-hover:scale-105 transform">
+        <div className="absolute bottom-4 right-4 flex items-center gap-2">
+            {googleDriveUrl && (
+              <a
+                href={googleDriveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="bg-gray-100 text-slate px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all duration-300 hover:bg-gray-200 hover:shadow-xl group-hover:scale-105 transform"
+                title="Open in Google Drive"
+              >
+                <LinkIcon className="w-5 h-5" />
+                <span className="text-sm font-bold">Open</span>
+              </a>
+            )}
+            <button
+              onClick={() => onDownloadClick(resource)}
+              className="bg-primary text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all duration-300 hover:bg-primary-dark group-hover:shadow-xl group-hover:scale-105 transform"
+              title={isComingSoon ? 'Notify Me' : 'Download'}
+            >
                 <DownloadIcon className="w-5 h-5" />
-                <span className="text-sm font-bold">Download</span>
-            </div>
+                <span className="text-sm font-bold">{isComingSoon ? 'Notify Me' : 'Download'}</span>
+            </button>
         </div>
       </div>
     </div>

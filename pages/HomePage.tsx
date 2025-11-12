@@ -3,6 +3,9 @@ import { Resource, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
 import ResourceCard from '../components/ResourceCard';
+import DownloadModal from '../components/DownloadModal';
+import { getSubscriberEmail, saveSubscriberEmail } from '../utils/emailGate';
+
 
 interface HomePageProps {
   resources: Resource[];
@@ -13,6 +16,8 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
   const [activeTags, setActiveTags] = useState<Tag[]>([]);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredResources = useMemo(() => {
     return resources
@@ -47,60 +52,80 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
   };
 
   const handleDownloadClick = (resource: Resource) => {
-    // Create an anonymous lead to track downloads without requiring user info.
-    const anonymousLead = { 
-      firstName: 'Anonymous', 
-      email: `anonymous-${Date.now()}@example.com`,
-      hasConsented: true 
-    };
-
-    if (resource.isComingSoon) {
-      onDownload(resource.id, anonymousLead);
-      alert("Thanks for registering your interest! We'll track demand for this resource.");
-      return;
+    const subscriberEmail = getSubscriberEmail();
+    if (subscriberEmail) {
+      // User is a returning subscriber, bypass the modal for a quick download.
+      const lead = { 
+        firstName: 'Subscriber', 
+        email: subscriberEmail, 
+        hasConsented: true 
+      };
+      onDownload(resource.id, lead);
+      if (resource.isComingSoon) {
+        alert("Thanks for registering your interest! We'll track demand for this resource.");
+      }
+    } else {
+      // New user, open the modal to capture lead info.
+      setSelectedResource(resource);
+      setIsModalOpen(true);
     }
-
-    // For downloadable files, trigger the download process.
-    onDownload(resource.id, anonymousLead);
   };
 
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedResource(null);
+  }
+
+  const handleModalDownload = async (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => {
+    await onDownload(resourceId, lead);
+    // The modal will show a success message, we don't need to do anything else here.
+  };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold text-slate tracking-tight">Financial Resource Library</h1>
-        <p className="mt-2 max-w-2xl mx-auto text-lg text-gray-500">
-          Your one-stop toolkit for financial planning and success.
-        </p>
-      </div>
-      
-      <div className="mb-6">
-        <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+    <>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-extrabold text-slate tracking-tight">Financial Resource Library</h1>
+          <p className="mt-2 max-w-2xl mx-auto text-lg text-gray-500">
+            Your one-stop toolkit for financial planning and success.
+          </p>
+        </div>
+        
+        <div className="mb-6">
+          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+        </div>
+
+        <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border">
+          <FilterButtons 
+            activeCategory={activeCategory}
+            activeTags={activeTags}
+            onCategoryChange={setActiveCategory}
+            onTagToggle={handleTagToggle}
+            onClear={handleClearFilters}
+          />
+        </div>
+
+        {filteredResources.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredResources.map((resource) => (
+              <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <h2 className="text-2xl font-semibold text-slate">No Resources Found</h2>
+            <p className="text-gray-500 mt-2">Try adjusting your search or filters.</p>
+          </div>
+        )}
       </div>
 
-      <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border">
-        <FilterButtons 
-          activeCategory={activeCategory}
-          activeTags={activeTags}
-          onCategoryChange={setActiveCategory}
-          onTagToggle={handleTagToggle}
-          onClear={handleClearFilters}
-        />
-      </div>
-
-      {filteredResources.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredResources.map((resource) => (
-            <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16">
-          <h2 className="text-2xl font-semibold text-slate">No Resources Found</h2>
-          <p className="text-gray-500 mt-2">Try adjusting your search or filters.</p>
-        </div>
-      )}
-    </div>
+      <DownloadModal
+        resource={selectedResource}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onDownload={handleModalDownload}
+      />
+    </>
   );
 };
 

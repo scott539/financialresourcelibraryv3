@@ -25,6 +25,7 @@ const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
   isComingSoon: false,
   fileUrl: '',
   fileName: '',
+  googleDriveUrl: '',
 };
 
 const fileToDataURL = (file: File): Promise<string> => {
@@ -146,7 +147,11 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        await onSubmit(formData);
+        const dataToSubmit = { ...formData };
+        if (!dataToSubmit.fileUrl && !dataToSubmit.googleDriveUrl) {
+          dataToSubmit.isComingSoon = true;
+        }
+        await onSubmit(dataToSubmit);
         setIsSubmitting(false);
     };
 
@@ -164,13 +169,20 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                         isImagePreview
                     />
                     {!formData.isComingSoon && (
+                      <>
                         <FileUploadZone
-                            label="Resource File"
+                            label="Resource File (for direct download)"
                             onFileUpload={handleFileUpload}
                             previewUrl={formData.fileName}
                             accept="application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/*,video/*,audio/*"
                             helpText="Documents, presentations, media files."
                         />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Google Drive URL (Optional)</label>
+                          <input type="url" name="googleDriveUrl" value={formData.googleDriveUrl} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" placeholder="https://docs.google.com/..." />
+                          <p className="text-xs text-gray-500 mt-1">Provide a file download OR a Google Drive URL.</p>
+                        </div>
+                      </>
                     )}
                 </div>
                 <div className="col-span-1 space-y-4">
@@ -221,7 +233,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                                 onChange={handleChange}
                                 className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                             />
-                            <span className="font-medium text-gray-700">Mark as "Coming Soon"</span>
+                            <span className="font-medium text-gray-700">Mark as "Coming Soon" (auto-enabled if no file)</span>
                         </label>
                     </div>
                 </div>
