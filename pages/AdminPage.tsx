@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag, ALL_TAGS, Lead } from '../types';
-import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon } from '../components/icons';
+import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 import { UNIFIED_IMAGE_DATA } from '../data/imageData';
 
 type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
@@ -26,6 +26,7 @@ const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
   fileUrl: '',
   fileName: '',
   googleDriveUrl: '',
+  isHidden: false,
 };
 
 const fileToDataURL = (file: File): Promise<string> => {
@@ -224,7 +225,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                             ))}
                         </div>
                     </div>
-                     <div>
+                     <div className="space-y-2">
                         <label className="flex items-center space-x-3 cursor-pointer p-2 border rounded-md hover:bg-gray-50">
                             <input
                                 type="checkbox"
@@ -234,6 +235,16 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                                 className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                             />
                             <span className="font-medium text-gray-700">Mark as "Coming Soon" (auto-enabled if no file)</span>
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer p-2 border rounded-md hover:bg-gray-50">
+                            <input
+                                type="checkbox"
+                                name="isHidden"
+                                checked={formData.isHidden}
+                                onChange={handleChange}
+                                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <span className="font-medium text-gray-700">Hide from public view</span>
                         </label>
                     </div>
                 </div>
@@ -323,6 +334,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     }
   }
 
+  const handleToggleVisibility = async (resource: Resource) => {
+    const updated = { ...resource, isHidden: !resource.isHidden };
+    await updateResource(updated);
+  };
+
   const handleCancelForm = () => {
       setEditingResource(null);
       setShowForm(false);
@@ -409,6 +425,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                         Coming Soon
                                     </div>
                                 )}
+                                {resource.isHidden && (
+                                    <div className="absolute top-2 right-2 bg-slate text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                                        Hidden
+                                    </div>
+                                )}
                                 <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-lg" />
                                 <div className="p-4 flex flex-col flex-grow">
                                     <h4 className="font-bold text-slate truncate flex-grow">{resource.title}</h4>
@@ -429,6 +450,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                                     <UsersIcon className="w-4 h-4" />
                                                 </button>
                                             )}
+                                            <button 
+                                                onClick={() => handleToggleVisibility(resource)} 
+                                                className="p-2 text-gray-500 hover:text-indigo-600 transition-colors rounded-full hover:bg-indigo-100" 
+                                                aria-label={resource.isHidden ? 'Make visible' : 'Hide resource'}
+                                                title={resource.isHidden ? 'Make visible' : 'Hide resource'}
+                                            >
+                                                {resource.isHidden ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                                            </button>
                                             <button onClick={() => handleEdit(resource)} className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-100" aria-label="Edit">
                                                 <EditIcon className="w-4 h-4" />
                                             </button>

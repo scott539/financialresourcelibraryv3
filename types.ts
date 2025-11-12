@@ -51,6 +51,7 @@ export interface Resource {
   fileUrl: string;
   fileName: string;
   googleDriveUrl?: string;
+  isHidden?: boolean;
 }
 
 export interface Lead {

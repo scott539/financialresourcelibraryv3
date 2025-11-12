@@ -22,6 +22,11 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload }) => {
   const filteredResources = useMemo(() => {
     return resources
       .filter(resource => {
+        // Exclude hidden resources from the public view
+        if (resource.isHidden) {
+          return false;
+        }
+
         const lowercasedSearchTerm = searchTerm.toLowerCase();
         const matchesSearch = (resource.title?.toLowerCase() || '').includes(lowercasedSearchTerm) ||
                               (resource.description?.toLowerCase() || '').includes(lowercasedSearchTerm);

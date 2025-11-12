@@ -94,6 +94,21 @@ export const LinkIcon: React.FC<{className?: string}> = ({className}) => (
   </svg>
 );
 
+export const EyeIcon: React.FC<{className?: string}> = ({className}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+);
+
+export const EyeOffIcon: React.FC<{className?: string}> = ({className}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a10.05 10.05 0 013.548-5.034m9.548-2.45A10.05 10.05 0 0121.543 12c-1.274 4.057-5.064 7-9.543 7a10.05 10.05 0 01-2.125-.3" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 1l22 22M9.9 4.9A1.99 1.99 0 0012 3c1.544 0 2.895.836 3.593 2.001M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+
 const navIconClasses = "w-6 h-6 mb-0.5";
 
 export const HomeIcon: React.FC<{className?: string}> = ({className}) => (
