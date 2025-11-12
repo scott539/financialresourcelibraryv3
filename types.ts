@@ -1,4 +1,5 @@
 
+
 export enum ResourceType {
   PDF = 'PDF',
   SPREADSHEET = 'Spreadsheet',
@@ -55,6 +56,7 @@ export interface Resource {
   isHidden?: boolean;
   createdAt?: any;
   updatedAt?: any;
+  liveDate?: any;
 }
 
 export interface Lead {

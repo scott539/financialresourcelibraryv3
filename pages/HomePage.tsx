@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Resource, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
@@ -26,6 +27,14 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
         // Exclude hidden resources from the public view
         if (resource.isHidden) {
           return false;
+        }
+
+        // Exclude resources scheduled for the future
+        if (resource.liveDate && typeof resource.liveDate.toDate === 'function') {
+          const liveDate = resource.liveDate.toDate();
+          if (liveDate > new Date()) {
+            return false;
+          }
         }
 
         const lowercasedSearchTerm = searchTerm.toLowerCase();

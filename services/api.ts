@@ -1,3 +1,4 @@
+
 import { Lead, Resource } from '../types';
 import { auth, db, storage } from '../firebaseConfig';
 import {
@@ -72,10 +73,16 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
      fileUrl = await uploadFile(fileUrl, filePath, resourceData.fileName);
   }
 
+  let liveDateForDb = null;
+  if (resourceData.liveDate) {
+    liveDateForDb = new Date(resourceData.liveDate);
+  }
+
   const docRef = await addDoc(collection(db, 'resources'), {
     ...resourceData,
     imageUrl,
     fileUrl,
+    liveDate: liveDateForDb,
     downloadCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -86,7 +93,7 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
 
 export const updateResource = async (updatedResource: Resource): Promise<Resource> => {
     const resourceRef = doc(db, 'resources', updatedResource.id);
-    const dataToUpdate: Partial<Resource> & { updatedAt: any } = { ...updatedResource, updatedAt: serverTimestamp() };
+    const dataToUpdate: any = { ...updatedResource, updatedAt: serverTimestamp() };
 
     // Handle image upload if it's a new data URL
     if (updatedResource.imageUrl.startsWith('data:')) {
@@ -102,6 +109,12 @@ export const updateResource = async (updatedResource: Resource): Promise<Resourc
         dataToUpdate.fileUrl = await uploadFile(updatedResource.fileUrl, filePath, updatedResource.fileName);
     }
 
+    // Convert string to Date or set to null, only if it's a string from the form
+    if (typeof dataToUpdate.liveDate === 'string') {
+        dataToUpdate.liveDate = dataToUpdate.liveDate ? new Date(dataToUpdate.liveDate) : null;
+    }
+    
+    delete dataToUpdate.id; // Ensure we don't try to write the document ID into the document data
     await updateDoc(resourceRef, dataToUpdate);
     return updatedResource;
 };

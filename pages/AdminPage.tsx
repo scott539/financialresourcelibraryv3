@@ -1,6 +1,7 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag, ALL_TAGS, Lead } from '../types';
-import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon } from '../components/icons';
+import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon, ClockIcon } from '../components/icons';
 import { UNIFIED_IMAGE_DATA } from '../data/imageData';
 
 type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
@@ -27,6 +28,7 @@ const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
   fileName: '',
   googleDriveUrl: '',
   isHidden: false,
+  liveDate: '',
 };
 
 const fileToDataURL = (file: File): Promise<string> => {
@@ -114,7 +116,15 @@ interface ResourceFormProps {
 const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCancel }) => {
     const [formData, setFormData] = useState(() => {
         const data = initialData || emptyResource;
-        return { ...data, tags: data.tags || [] };
+        
+        let liveDateString = '';
+        if (data.liveDate && typeof data.liveDate.toDate === 'function') {
+            const d = data.liveDate.toDate();
+            const pad = (num: number) => num.toString().padStart(2, '0');
+            liveDateString = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        
+        return { ...data, tags: data.tags || [], liveDate: liveDateString };
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const isEditing = initialData && 'id' in initialData;
@@ -243,7 +253,27 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                             ))}
                         </div>
                     </div>
-                     <div className="space-y-2">
+                     <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Schedule Go-Live Date (Optional)</label>
+                            <div className="mt-1 flex rounded-md shadow-sm">
+                                <input
+                                    type="datetime-local"
+                                    name="liveDate"
+                                    value={formData.liveDate || ''}
+                                    onChange={handleChange}
+                                    className="flex-1 block w-full border-gray-300 rounded-l-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({...prev, liveDate: ''}))}
+                                    className="px-3 py-2 bg-gray-200 text-gray-700 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-300 text-sm font-medium"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">Resource will be hidden from public view until this date.</p>
+                        </div>
                         <label className="flex items-center space-x-3 p-2 border rounded-md bg-gray-100 cursor-not-allowed">
                             <input
                                 type="checkbox"
@@ -436,13 +466,23 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                     <h3 className="text-2xl font-semibold text-slate mb-4">Existing Resources</h3>
                     {resources.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {resources.map(resource => (
+                        {resources.map(resource => {
+                            const isScheduled = resource.liveDate && resource.liveDate.toDate() > new Date();
+                            return (
                             <div key={resource.id} className="relative bg-white rounded-lg shadow-md border flex flex-col">
-                                {resource.isComingSoon && (
-                                    <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full z-10">
-                                        Coming Soon
-                                    </div>
-                                )}
+                                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                    {isScheduled && (
+                                        <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                                            <ClockIcon className="w-3 h-3"/>
+                                            Scheduled
+                                        </span>
+                                    )}
+                                    {resource.isComingSoon && (
+                                        <div className="bg-yellow-400 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">
+                                            Coming Soon
+                                        </div>
+                                    )}
+                                </div>
                                 {resource.isHidden && (
                                     <div className="absolute top-2 right-2 bg-slate text-white text-xs font-bold px-2 py-1 rounded-full z-10">
                                         Hidden
@@ -450,8 +490,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                 )}
                                 <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-lg" />
                                 <div className="p-4 flex flex-col flex-grow">
-                                    <h4 className="font-bold text-slate truncate flex-grow">{resource.title}</h4>
-                                    <p className="text-xs text-gray-500">{resource.category}</p>
+                                    <h4 className="font-bold text-slate truncate">{resource.title}</h4>
+                                    <p className="text-xs text-gray-500 flex-grow">{resource.category}</p>
+                                    {isScheduled && (
+                                        <p className="text-xs text-blue-700 font-medium my-1">
+                                            Live: {resource.liveDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                        </p>
+                                    )}
                                     <div className="mt-2 flex justify-between items-center">
                                         <div className="flex items-center text-sm text-gray-600">
                                             <DownloadIcon className="w-4 h-4 mr-1"/>
@@ -486,7 +531,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                        )})}
                     </div>
                      ) : (
                         <div className="text-center py-16 border-dashed border-2 border-gray-300 rounded-lg">
