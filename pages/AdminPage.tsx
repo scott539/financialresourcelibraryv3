@@ -119,6 +119,11 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     const [isSubmitting, setIsSubmitting] = useState(false);
     const isEditing = initialData && 'id' in initialData;
 
+    // The 'isComingSoon' status is now derived from whether a file or link is present.
+    // This provides clear, automatic feedback to the admin.
+    const hasDownloadable = !!formData.fileUrl || !!formData.googleDriveUrl?.trim();
+    const isEffectivelyComingSoon = !hasDownloadable;
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const isCheckbox = type === 'checkbox';
@@ -148,10 +153,10 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        const dataToSubmit = { ...formData };
-        if (!dataToSubmit.fileUrl && !dataToSubmit.googleDriveUrl) {
-          dataToSubmit.isComingSoon = true;
-        }
+        const dataToSubmit = { 
+            ...formData, 
+            isComingSoon: isEffectivelyComingSoon 
+        };
         await onSubmit(dataToSubmit);
         setIsSubmitting(false);
     };
@@ -169,31 +174,44 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                         helpText="Recommended: 400x400px. PNG, JPG, GIF up to 10MB"
                         isImagePreview
                     />
-                    {!formData.isComingSoon && (
-                      <>
-                        <FileUploadZone
-                            label="Resource File (for direct download)"
-                            onFileUpload={handleFileUpload}
-                            previewUrl={formData.fileName}
-                            accept="application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/*,video/*,audio/*"
-                            helpText="Documents, presentations, media files."
-                        />
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Google Drive URL (Optional)</label>
-                          <input type="url" name="googleDriveUrl" value={formData.googleDriveUrl} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" placeholder="https://docs.google.com/..." />
-                          <p className="text-xs text-gray-500 mt-1">Provide a file download OR a Google Drive URL.</p>
-                        </div>
-                      </>
-                    )}
+                    <>
+                      <FileUploadZone
+                          label="Resource File (for direct download)"
+                          onFileUpload={handleFileUpload}
+                          previewUrl={formData.fileName}
+                          accept="application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/*,video/*,audio/*"
+                          helpText="Documents, presentations, media files."
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Google Drive URL (Optional)</label>
+                        <input type="url" name="googleDriveUrl" value={formData.googleDriveUrl || ''} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" placeholder="https://docs.google.com/..." />
+                        <p className="text-xs text-gray-500 mt-1">Provide a file download OR a Google Drive URL.</p>
+                      </div>
+                    </>
                 </div>
                 <div className="col-span-1 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Title</label>
-                        <input type="text" name="title" value={formData.title} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+                        <input id="title" type="text" name="title" value={formData.title} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Short Description</label>
-                        <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
+                        <div className="flex justify-between items-baseline">
+                           <label htmlFor="description" className="block text-sm font-medium text-gray-700">Short Description</label>
+                           <span className={`text-xs font-medium ${formData.description.length >= 150 ? 'text-red-600' : 'text-gray-500'}`}>
+                               {formData.description.length} / 150
+                           </span>
+                        </div>
+                        <textarea 
+                            id="description"
+                            name="description" 
+                            value={formData.description} 
+                            onChange={handleChange} 
+                            rows={3} 
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" 
+                            required 
+                            maxLength={150}
+                        />
+                        <p className="mt-1 text-xs text-gray-500">A brief summary helps maintain a clean and consistent look on resource cards.</p>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -226,21 +244,21 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                         </div>
                     </div>
                      <div className="space-y-2">
-                        <label className="flex items-center space-x-3 cursor-pointer p-2 border rounded-md hover:bg-gray-50">
+                        <label className="flex items-center space-x-3 p-2 border rounded-md bg-gray-100 cursor-not-allowed">
                             <input
                                 type="checkbox"
                                 name="isComingSoon"
-                                checked={formData.isComingSoon}
-                                onChange={handleChange}
+                                checked={isEffectivelyComingSoon}
+                                readOnly
                                 className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                             />
-                            <span className="font-medium text-gray-700">Mark as "Coming Soon" (auto-enabled if no file)</span>
+                            <span className="font-medium text-gray-700">"Coming Soon" (automatic if no file/link)</span>
                         </label>
                         <label className="flex items-center space-x-3 cursor-pointer p-2 border rounded-md hover:bg-gray-50">
                             <input
                                 type="checkbox"
                                 name="isHidden"
-                                checked={formData.isHidden}
+                                checked={!!formData.isHidden}
                                 onChange={handleChange}
                                 className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                             />
