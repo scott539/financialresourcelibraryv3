@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Resource, ResourceType } from '../types';
 import { PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, VideoIcon, AudioIcon, DownloadIcon, LinkIcon } from './icons';
 
@@ -8,7 +8,15 @@ interface ResourceCardProps {
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }) => {
-  const { id, title, description, type, tags = [], imageUrl, downloadCount, isComingSoon, googleDriveUrl } = resource;
+  const { title, description, type, tags = [], imageUrl, downloadCount, isComingSoon, googleDriveUrl } = resource;
+  
+  const [isExpanded, setIsExpanded] = useState(false);
+  const descriptionLimit = 100;
+  const isLongDescription = description.length > descriptionLimit;
+
+  const displayedDescription = isLongDescription && !isExpanded
+    ? `${description.substring(0, descriptionLimit)}...`
+    : description;
 
   const getTypeIcon = () => {
     switch (type) {
@@ -33,7 +41,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
 
   return (
     <div className="block group h-full">
-      <div className="relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden h-full flex flex-col">
+      <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden h-full flex flex-col">
         <div className="relative">
           <img src={imageUrl} alt={title} className="w-full aspect-square object-cover" />
           {isComingSoon && (
@@ -45,48 +53,65 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick }
             {(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : 'Downloads'}
           </div>
         </div>
-        <div className="p-4 pb-20 flex flex-col flex-grow">
+        <div className="p-4 flex flex-col flex-grow">
           <div className="flex items-center text-sm text-gray-500 mb-1">
             {getTypeIcon()}
             <span>{type}</span>
           </div>
           <h3 className="text-lg font-semibold text-slate mb-2 group-hover:text-primary transition-colors duration-300">{title}</h3>
-          <p className="text-gray-600 text-sm flex-grow">{description}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {tags.slice(0, 2).map(tag => (
-              <span key={tag} className="text-xs font-semibold inline-block py-0.5 px-2 uppercase rounded-full text-primary bg-secondary/30">
-                {tag}
-              </span>
-            ))}
-            {tags.length > 2 && (
-                <span className="text-xs font-medium text-gray-500">
-                    +{tags.length - 2} more
-                </span>
+          
+          <div className="flex-grow">
+            <p className="text-gray-600 text-sm">{displayedDescription}</p>
+            {isLongDescription && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                className="text-primary font-semibold text-sm mt-1 hover:underline focus:outline-none"
+              >
+                {isExpanded ? 'Read less' : 'Read more'}
+              </button>
             )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {tags.slice(0, 2).map(tag => (
+                <span key={tag} className="text-xs font-semibold inline-block py-0.5 px-2 uppercase rounded-full text-primary bg-secondary/30">
+                  {tag}
+                </span>
+              ))}
+              {tags.length > 2 && (
+                  <span className="text-xs font-medium text-gray-500">
+                      +{tags.length - 2} more
+                  </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="absolute bottom-4 right-4 flex items-center gap-2">
+
+          <div className="mt-4 pt-4 border-t border-gray-200 flex flex-col gap-2">
             {googleDriveUrl && (
               <a
                 href={googleDriveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="bg-gray-100 text-slate px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all duration-300 hover:bg-gray-200 hover:shadow-xl group-hover:scale-105 transform"
+                className="w-full text-center bg-white text-blue-600 px-4 py-2 rounded-md shadow-sm flex items-center justify-center gap-2 transition-all duration-300 hover:bg-blue-50 border border-gray-300"
                 title="Open in Google Drive"
               >
                 <LinkIcon className="w-5 h-5" />
-                <span className="text-sm font-bold">Open</span>
+                <span className="text-sm font-bold">Open in Google Drive</span>
               </a>
             )}
             <button
               onClick={() => onDownloadClick(resource)}
-              className="bg-primary text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all duration-300 hover:bg-primary-dark group-hover:shadow-xl group-hover:scale-105 transform"
+              className="w-full text-center bg-primary text-white px-4 py-2 rounded-md shadow-sm flex items-center justify-center gap-2 transition-all duration-300 hover:bg-primary-dark"
               title={isComingSoon ? 'Notify Me' : 'Download'}
             >
                 <DownloadIcon className="w-5 h-5" />
                 <span className="text-sm font-bold">{isComingSoon ? 'Notify Me' : 'Download'}</span>
             </button>
+          </div>
         </div>
       </div>
     </div>

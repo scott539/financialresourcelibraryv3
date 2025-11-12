@@ -96,10 +96,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({ resource, isOpen, onClose
               href={resource.googleDriveUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full bg-gray-100 text-slate font-bold py-2 px-4 rounded-md transition duration-300 hover:bg-gray-200 flex items-center justify-center gap-2"
+              className="w-full bg-white text-blue-600 font-bold py-2 px-4 rounded-md transition duration-300 hover:bg-blue-50 border border-gray-300 flex items-center justify-center gap-2"
             >
               <LinkIcon className="w-5 h-5" />
-              Open in Drive
+              Open in Google Drive
             </a>
           )}
       </div>
