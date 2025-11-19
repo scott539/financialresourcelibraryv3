@@ -5,8 +5,7 @@ import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
 import ResourceCard from '../components/ResourceCard';
 import DownloadModal from '../components/DownloadModal';
-import { getSubscriberEmail, saveSubscriberEmail } from '../utils/emailGate';
-
+import { getSubscriberEmail } from '../utils/emailGate';
 
 interface HomePageProps {
   resources: Resource[];
@@ -69,7 +68,6 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
   const handleDownloadClick = (resource: Resource) => {
     const subscriberEmail = getSubscriberEmail();
     if (subscriberEmail) {
-      // User is a returning subscriber, bypass the modal for a quick download.
       const lead = { 
         firstName: 'Subscriber', 
         email: subscriberEmail, 
@@ -80,14 +78,6 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
         alert("Thanks for registering your interest! We'll track demand for this resource.");
       }
     } 
-    /*
-    // Email gate is currently disabled. All users are treated as subscribers.
-    else {
-      // New user, open the modal to capture lead info.
-      setSelectedResource(resource);
-      setIsModalOpen(true);
-    }
-    */
   };
 
   const handleModalClose = () => {
@@ -97,45 +87,48 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
 
   const handleModalDownload = async (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => {
     await onDownload(resourceId, lead);
-    // The modal will show a success message, we don't need to do anything else here.
   };
 
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-slate tracking-tight">Financial Resource Library</h1>
-          <p className="mt-2 max-w-2xl mx-auto text-lg text-gray-500">
-            Your one-stop toolkit for financial planning and success.
-          </p>
+            <h1 className="text-4xl font-extrabold text-slate tracking-tight">Financial Resource Library</h1>
+            <p className="mt-2 max-w-2xl mx-auto text-lg text-gray-500">
+              Your one-stop toolkit for financial planning and success.
+            </p>
         </div>
         
-        <div className="mb-6">
-          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-        </div>
+        {/* Main Content - Full Width */}
+        <div className="w-full">
+            <div className="mb-6">
+              <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+            </div>
 
-        <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border">
-          <FilterButtons 
-            activeCategory={activeCategory}
-            activeTags={activeTags}
-            onCategoryChange={setActiveCategory}
-            onTagToggle={handleTagToggle}
-            onClear={handleClearFilters}
-          />
-        </div>
+            <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border">
+              <FilterButtons 
+                activeCategory={activeCategory}
+                activeTags={activeTags}
+                onCategoryChange={setActiveCategory}
+                onTagToggle={handleTagToggle}
+                onClear={handleClearFilters}
+              />
+            </div>
 
-        {filteredResources.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredResources.map((resource) => (
-              <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} onGoogleDriveClick={onGoogleDriveClick} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <h2 className="text-2xl font-semibold text-slate">No Resources Found</h2>
-            <p className="text-gray-500 mt-2">Try adjusting your search or filters.</p>
-          </div>
-        )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
+              {filteredResources.length > 0 ? (
+                filteredResources.map((resource) => (
+                  <ResourceCard key={resource.id} resource={resource} onDownloadClick={handleDownloadClick} onGoogleDriveClick={onGoogleDriveClick} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-16">
+                  <h2 className="text-2xl font-semibold text-slate">No Resources Found</h2>
+                  <p className="text-gray-500 mt-2">Try adjusting your search or filters.</p>
+                </div>
+              )}
+            </div>
+        </div>
       </div>
 
       <DownloadModal

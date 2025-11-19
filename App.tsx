@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -8,7 +9,8 @@ import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage'; // Import the new page
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import ConvertKitScript from './components/ConvertKitForm'; // Script Loader
 import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
@@ -54,16 +56,23 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (window.self === window.top) return;
+    
+    let rafId: number;
     const postHeight = () => {
-      const height = document.documentElement.scrollHeight;
-      window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
+      rafId = requestAnimationFrame(() => {
+        const height = document.documentElement.scrollHeight;
+        window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
+      });
     };
+
     const observer = new ResizeObserver(postHeight);
     observer.observe(document.documentElement);
     document.addEventListener('transitionend', postHeight);
-    const initialTimeout = setTimeout(postHeight, 100);
+    
+    postHeight();
+
     return () => {
-      clearTimeout(initialTimeout);
+      if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
       document.removeEventListener('transitionend', postHeight);
     };
@@ -78,7 +87,6 @@ const AppContent: React.FC = () => {
   };
 
   const handleUpdateCredentials = async (currentPass: string, newUser: string, newPass: string): Promise<boolean> => {
-    // Note: newUser (email) update is not handled in the current api.ts for simplicity
     return await api.updateCredentials(currentPass, newUser, newPass);
   };
 
@@ -89,11 +97,10 @@ const AppContent: React.FC = () => {
     await api.addLead(resourceId, resource.title, leadData);
     
     if (!resource.isComingSoon && resource.fileUrl) {
-      // Use a more reliable download method instead of window.open
       const link = document.createElement('a');
       link.href = resource.fileUrl;
-      link.target = '_blank'; // Good fallback
-      link.download = resource.fileName || 'download'; // Suggests a filename to the browser
+      link.target = '_blank';
+      link.download = resource.fileName || 'download';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -136,11 +143,15 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />
+      
+      {/* Load ConvertKit Popup/Slide-in globally */}
+      <ConvertKitScript />
+
       <main className="flex-grow pb-16 md:pb-0">
         <Routes>
           <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-          <Route path="/privacy" element={<PrivacyPolicyPage />} /> {/* Add new route */}
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route 
             path="/admin"
             element={
