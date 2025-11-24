@@ -10,7 +10,6 @@ import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
-import ConvertKitScript from './components/ConvertKitForm'; // Script Loader
 import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
@@ -143,9 +142,6 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />
-      
-      {/* Load ConvertKit Popup/Slide-in globally */}
-      <ConvertKitScript />
 
       <main className="flex-grow pb-16 md:pb-0">
         <Routes>
