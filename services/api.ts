@@ -15,6 +15,7 @@ import {
 import {
   ref,
   uploadString,
+  uploadBytes,
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
@@ -47,17 +48,22 @@ export const getResources = async (): Promise<Resource[]> => {
   return resourceList;
 };
 
-const uploadFile = async (fileDataUrl: string, path: string, fileName: string): Promise<string> => {
+const uploadFile = async (file: File | string, path: string, fileName: string): Promise<string> => {
     const storageRef = ref(storage, path);
     const metadata = {
         contentDisposition: `attachment; filename="${fileName}"`,
     };
-    await uploadString(storageRef, fileDataUrl, 'data_url', metadata);
+    
+    if (file instanceof File) {
+        await uploadBytes(storageRef, file, metadata);
+    } else {
+        await uploadString(storageRef, file, 'data_url', metadata);
+    }
     return getDownloadURL(storageRef);
 };
 
 
-export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>): Promise<Resource> => {
+export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>, fileToUpload?: File): Promise<Resource> => {
   let imageUrl = resourceData.imageUrl;
   if (imageUrl.startsWith('data:')) {
     const imagePath = `thumbnails/${new Date().getTime()}_${resourceData.title.replace(/\s+/g, '_')}`;
@@ -67,7 +73,14 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
   }
 
   let fileUrl = resourceData.fileUrl || '';
-  if (fileUrl && fileUrl.startsWith('data:')) {
+  
+  // Priority: Upload raw file if provided
+  if (fileToUpload) {
+     const uniqueFolderName = new Date().getTime();
+     const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
+     fileUrl = await uploadFile(fileToUpload, filePath, resourceData.fileName);
+  } else if (fileUrl && fileUrl.startsWith('data:')) {
+     // Fallback for base64 strings (legacy or small files)
      const uniqueFolderName = new Date().getTime();
      const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
      fileUrl = await uploadFile(fileUrl, filePath, resourceData.fileName);
@@ -91,7 +104,7 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
   return { ...resourceData, id: docRef.id, downloadCount: 0 };
 };
 
-export const updateResource = async (updatedResource: Resource): Promise<Resource> => {
+export const updateResource = async (updatedResource: Resource, fileToUpload?: File): Promise<Resource> => {
     const resourceRef = doc(db, 'resources', updatedResource.id);
     const dataToUpdate: any = { ...updatedResource, updatedAt: serverTimestamp() };
 
@@ -102,8 +115,12 @@ export const updateResource = async (updatedResource: Resource): Promise<Resourc
         dataToUpdate.imageUrl = await uploadFile(updatedResource.imageUrl, imagePath, tempImageName);
     }
 
-    // Handle file upload if it's a new data URL
-    if (updatedResource.fileUrl && updatedResource.fileUrl.startsWith('data:')) {
+    // Handle file upload
+    if (fileToUpload) {
+        const uniqueFolderName = new Date().getTime();
+        const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
+        dataToUpdate.fileUrl = await uploadFile(fileToUpload, filePath, updatedResource.fileName);
+    } else if (updatedResource.fileUrl && updatedResource.fileUrl.startsWith('data:')) {
         const uniqueFolderName = new Date().getTime();
         const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
         dataToUpdate.fileUrl = await uploadFile(updatedResource.fileUrl, filePath, updatedResource.fileName);

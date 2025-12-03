@@ -9,8 +9,8 @@ type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
 interface AdminPageProps {
   resources: Resource[];
   leads: Lead[];
-  addResource: (resource: Omit<Resource, 'id' | 'downloadCount'>) => Promise<void>;
-  updateResource: (resource: Resource) => Promise<void>;
+  addResource: (resource: Omit<Resource, 'id' | 'downloadCount'>, file?: File) => Promise<void>;
+  updateResource: (resource: Resource, file?: File) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
   adminUsername: string;
   updateCredentials: (currentPass: string, newUser: string, newPass: string) => Promise<boolean>;
@@ -57,7 +57,11 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileUpload, previewUr
         if (files && files[0]) {
             const file = files[0];
             setFileName(file.name);
-            const dataUrl = await fileToDataURL(file);
+            let dataUrl = '';
+            // Only convert to base64 if it's an image preview to avoid memory issues with large files
+            if (isImagePreview) {
+                dataUrl = await fileToDataURL(file);
+            }
             onFileUpload(file, dataUrl);
         }
     };
@@ -108,7 +112,7 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileUpload, previewUr
 };
 
 interface ResourceFormProps {
-    onSubmit: (resource: Omit<Resource, 'id' | 'downloadCount'> | Resource) => Promise<void>;
+    onSubmit: (resource: Omit<Resource, 'id' | 'downloadCount'> | Resource, file?: File) => Promise<void>;
     initialData: Omit<Resource, 'id' | 'downloadCount'> | Resource | null;
     onCancel: () => void;
 }
@@ -126,12 +130,13 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
         
         return { ...data, tags: data.tags || [], liveDate: liveDateString };
     });
+    const [resourceFile, setResourceFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const isEditing = initialData && 'id' in initialData;
 
     // The 'isComingSoon' status is now derived from whether a file or link is present.
     // This provides clear, automatic feedback to the admin.
-    const hasDownloadable = !!formData.fileUrl || !!formData.googleDriveUrl?.trim();
+    const hasDownloadable = !!formData.fileUrl || !!formData.googleDriveUrl?.trim() || !!resourceFile;
     const isEffectivelyComingSoon = !hasDownloadable;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -157,7 +162,9 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     }
     
     const handleFileUpload = (file: File, dataUrl: string) => {
+        // We set fileName for display/DB, but fileUrl stays empty if it's a new file (we use resourceFile instead)
         setFormData(prev => ({ ...prev, fileUrl: dataUrl, fileName: file.name }));
+        setResourceFile(file);
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -167,7 +174,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
             ...formData, 
             isComingSoon: isEffectivelyComingSoon 
         };
-        await onSubmit(dataToSubmit);
+        await onSubmit(dataToSubmit, resourceFile || undefined);
         setIsSubmitting(false);
     };
 
@@ -357,11 +364,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
   };
 
 
-  const handleFormSubmit = async (resourceData: Omit<Resource, 'id' | 'downloadCount'> | Resource) => {
+  const handleFormSubmit = async (resourceData: Omit<Resource, 'id' | 'downloadCount'> | Resource, file?: File) => {
     if ('id' in resourceData) {
-      await updateResource(resourceData);
+      await updateResource(resourceData as Resource, file);
     } else {
-      await addResource(resourceData);
+      await addResource(resourceData, file);
     }
     setEditingResource(null);
     setShowForm(false);

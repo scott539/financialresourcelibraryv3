@@ -113,13 +113,13 @@ const AppContent: React.FC = () => {
     fetchData();
   };
 
-  const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>) => {
-    await api.addResource(resourceData);
+  const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>, file?: File) => {
+    await api.addResource(resourceData, file);
     fetchData();
   };
 
-  const updateResource = async (updatedResource: Resource) => {
-    await api.updateResource(updatedResource);
+  const updateResource = async (updatedResource: Resource, file?: File) => {
+    await api.updateResource(updatedResource, file);
     fetchData();
   };
 
