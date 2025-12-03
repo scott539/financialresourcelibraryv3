@@ -29,14 +29,20 @@ import {
 // --- Helper Functions ---
 
 const dataURItoBlob = (dataURI: string) => {
-    const byteString = atob(dataURI.split(',')[1]);
-    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
+    try {
+        const splitData = dataURI.split(',');
+        const byteString = atob(splitData[1]);
+        const mimeString = splitData[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], { type: mimeString });
+    } catch (e) {
+        console.error("Error converting data URI to blob:", e);
+        throw new Error("Invalid image data.");
     }
-    return new Blob([ab], { type: mimeString });
 }
 
 // --- Resources API ---
@@ -48,28 +54,42 @@ export const getResources = async (): Promise<Resource[]> => {
   return resourceList;
 };
 
-const uploadFile = async (file: File | string, path: string, fileName: string): Promise<string> => {
+const uploadFile = async (file: File | Blob | string, path: string, fileName: string): Promise<string> => {
+    console.log(`[API] Starting upload for ${fileName} to ${path}`);
     const storageRef = ref(storage, path);
     const metadata = {
         contentDisposition: `attachment; filename="${fileName}"`,
     };
     
-    if (file instanceof File) {
-        await uploadBytes(storageRef, file, metadata);
-    } else {
-        await uploadString(storageRef, file, 'data_url', metadata);
+    try {
+        if (file instanceof File || file instanceof Blob) {
+            console.log(`[API] Uploading as bytes (File/Blob)... size: ${(file as any).size}`);
+            await uploadBytes(storageRef, file, metadata);
+        } else {
+            console.log('[API] Uploading as base64 string...');
+            await uploadString(storageRef, file, 'data_url', metadata);
+        }
+        console.log(`[API] Upload successful for ${fileName}, getting download URL...`);
+        const url = await getDownloadURL(storageRef);
+        console.log(`[API] Got download URL for ${fileName}`);
+        return url;
+    } catch (error) {
+        console.error(`[API] Upload failed for ${fileName}:`, error);
+        throw error;
     }
-    return getDownloadURL(storageRef);
 };
 
 
 export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>, fileToUpload?: File): Promise<Resource> => {
+  console.log('[API] addResource called');
   let imageUrl = resourceData.imageUrl;
+  
   if (imageUrl.startsWith('data:')) {
     const imagePath = `thumbnails/${new Date().getTime()}_${resourceData.title.replace(/\s+/g, '_')}`;
-    // Image thumbnails don't need the download behavior, so we can use a simpler upload or pass an empty filename.
     const tempImageName = `thumbnail_${Date.now()}`;
-    imageUrl = await uploadFile(imageUrl, imagePath, tempImageName);
+    // Convert to Blob for stability
+    const imageBlob = dataURItoBlob(imageUrl);
+    imageUrl = await uploadFile(imageBlob, imagePath, tempImageName);
   }
 
   let fileUrl = resourceData.fileUrl || '';
@@ -80,10 +100,11 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
      const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
      fileUrl = await uploadFile(fileToUpload, filePath, resourceData.fileName);
   } else if (fileUrl && fileUrl.startsWith('data:')) {
-     // Fallback for base64 strings (legacy or small files)
+     // Fallback for base64 strings, convert to blob
      const uniqueFolderName = new Date().getTime();
      const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
-     fileUrl = await uploadFile(fileUrl, filePath, resourceData.fileName);
+     const fileBlob = dataURItoBlob(fileUrl);
+     fileUrl = await uploadFile(fileBlob, filePath, resourceData.fileName);
   }
 
   let liveDateForDb = null;
@@ -91,6 +112,7 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
     liveDateForDb = new Date(resourceData.liveDate);
   }
 
+  console.log('[API] Adding document to Firestore...');
   const docRef = await addDoc(collection(db, 'resources'), {
     ...resourceData,
     imageUrl,
@@ -100,11 +122,13 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  console.log('[API] Document added with ID:', docRef.id);
   
   return { ...resourceData, id: docRef.id, downloadCount: 0 };
 };
 
 export const updateResource = async (updatedResource: Resource, fileToUpload?: File): Promise<Resource> => {
+    console.log('[API] updateResource called for:', updatedResource.id);
     const resourceRef = doc(db, 'resources', updatedResource.id);
     const dataToUpdate: any = { ...updatedResource, updatedAt: serverTimestamp() };
 
@@ -112,7 +136,8 @@ export const updateResource = async (updatedResource: Resource, fileToUpload?: F
     if (updatedResource.imageUrl.startsWith('data:')) {
         const imagePath = `thumbnails/${new Date().getTime()}_${updatedResource.title.replace(/\s+/g, '_')}`;
         const tempImageName = `thumbnail_${Date.now()}`;
-        dataToUpdate.imageUrl = await uploadFile(updatedResource.imageUrl, imagePath, tempImageName);
+        const imageBlob = dataURItoBlob(updatedResource.imageUrl);
+        dataToUpdate.imageUrl = await uploadFile(imageBlob, imagePath, tempImageName);
     }
 
     // Handle file upload
@@ -123,7 +148,8 @@ export const updateResource = async (updatedResource: Resource, fileToUpload?: F
     } else if (updatedResource.fileUrl && updatedResource.fileUrl.startsWith('data:')) {
         const uniqueFolderName = new Date().getTime();
         const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
-        dataToUpdate.fileUrl = await uploadFile(updatedResource.fileUrl, filePath, updatedResource.fileName);
+        const fileBlob = dataURItoBlob(updatedResource.fileUrl);
+        dataToUpdate.fileUrl = await uploadFile(fileBlob, filePath, updatedResource.fileName);
     }
 
     // Convert string to Date or set to null, only if it's a string from the form
@@ -132,7 +158,9 @@ export const updateResource = async (updatedResource: Resource, fileToUpload?: F
     }
     
     delete dataToUpdate.id; // Ensure we don't try to write the document ID into the document data
+    console.log('[API] Updating Firestore document...');
     await updateDoc(resourceRef, dataToUpdate);
+    console.log('[API] Update complete.');
     return updatedResource;
 };
 
@@ -143,11 +171,11 @@ export const deleteResource = async (id: string, resource: Resource): Promise<vo
 
     // Also delete associated files from storage
     try {
-        if (resource.imageUrl) {
+        if (resource.imageUrl && !resource.imageUrl.startsWith('data:')) {
             const imageRef = ref(storage, resource.imageUrl);
             await deleteObject(imageRef);
         }
-        if (resource.fileUrl) {
+        if (resource.fileUrl && !resource.fileUrl.startsWith('data:')) {
             const fileRef = ref(storage, resource.fileUrl);
             await deleteObject(fileRef);
         }

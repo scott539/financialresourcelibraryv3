@@ -132,6 +132,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     });
     const [resourceFile, setResourceFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string>('');
     const isEditing = initialData && 'id' in initialData;
 
     // The 'isComingSoon' status is now derived from whether a file or link is present.
@@ -169,13 +170,25 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('[AdminPage] Submitting form...');
         setIsSubmitting(true);
-        const dataToSubmit = { 
-            ...formData, 
-            isComingSoon: isEffectivelyComingSoon 
-        };
-        await onSubmit(dataToSubmit, resourceFile || undefined);
-        setIsSubmitting(false);
+        setSubmitError('');
+        
+        try {
+            const dataToSubmit = { 
+                ...formData, 
+                isComingSoon: isEffectivelyComingSoon 
+            };
+            console.log('[AdminPage] Calling onSubmit prop with data:', dataToSubmit);
+            await onSubmit(dataToSubmit, resourceFile || undefined);
+            console.log('[AdminPage] Submission successful.');
+        } catch (error: any) {
+            console.error("[AdminPage] Error submitting resource:", error);
+            setSubmitError(error.message || "An unexpected error occurred while saving. Please try again.");
+        } finally {
+            console.log('[AdminPage] Resetting submitting state.');
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -304,6 +317,14 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                     </div>
                 </div>
             </div>
+            
+            {submitError && (
+                <div className="p-4 bg-red-50 border-l-4 border-red-400 text-red-700">
+                    <p className="font-bold">Error saving resource</p>
+                    <p className="text-sm">{submitError}</p>
+                </div>
+            )}
+
             <div className="flex justify-end space-x-2 pt-4">
                 <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300" disabled={isSubmitting}>Cancel</button>
                 <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark disabled:opacity-50" disabled={isSubmitting}>
