@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag, ALL_TAGS, Lead } from '../types';
-import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon, ClockIcon } from '../components/icons';
+import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon, ClockIcon, CopyIcon } from '../components/icons';
 import { UNIFIED_IMAGE_DATA } from '../data/imageData';
 
 type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
@@ -342,6 +342,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
   const [activeTab, setActiveTab] = useState<AdminTab>('manage');
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   // State for Settings tab
   const [currentPassword, setCurrentPassword] = useState('');
@@ -423,6 +424,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
   const handleAddNew = () => {
     setEditingResource(null);
     setShowForm(true);
+  }
+
+  const handleCopyId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   }
   
   const downloadSignupsAsCSV = useCallback((resource: Resource) => {
@@ -519,13 +526,33 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                 <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-lg" />
                                 <div className="p-4 flex flex-col flex-grow">
                                     <h4 className="font-bold text-slate truncate">{resource.title}</h4>
-                                    <p className="text-xs text-gray-500 flex-grow">{resource.category}</p>
+                                    <p className="text-xs text-gray-500 mb-2">{resource.category}</p>
+                                    
+                                    {/* Resource ID Display */}
+                                    <div className="mb-3 p-1.5 bg-gray-50 rounded border border-gray-100 flex items-center justify-between group/id">
+                                        <div className="flex flex-col">
+                                          <span className="text-[10px] uppercase font-bold text-gray-400 leading-tight">Resource ID</span>
+                                          <code className="text-xs font-mono text-primary truncate max-w-[140px]">{resource.id}</code>
+                                        </div>
+                                        <button 
+                                          onClick={() => handleCopyId(resource.id)}
+                                          className={`p-1.5 rounded transition-colors ${copiedId === resource.id ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                                          title="Copy ID for Embedding"
+                                        >
+                                          {copiedId === resource.id ? (
+                                            <span className="text-[10px] font-bold px-1">COPIED</span>
+                                          ) : (
+                                            <CopyIcon className="w-3.5 h-3.5" />
+                                          )}
+                                        </button>
+                                    </div>
+
                                     {isScheduled && (
                                         <p className="text-xs text-blue-700 font-medium my-1">
                                             Live: {resource.liveDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                         </p>
                                     )}
-                                    <div className="mt-2 flex justify-between items-center">
+                                    <div className="mt-auto flex justify-between items-center pt-2 border-t">
                                         <div className="flex items-center text-sm text-gray-600">
                                             <DownloadIcon className="w-4 h-4 mr-1"/>
                                             <span>{(resource.downloadCount || 0).toLocaleString()} {resource.isComingSoon ? 'Signups' : 'Downloads'}</span>
