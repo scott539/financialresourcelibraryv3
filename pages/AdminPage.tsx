@@ -58,7 +58,6 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileUpload, previewUr
             const file = files[0];
             setFileName(file.name);
             let dataUrl = '';
-            // Only convert to base64 if it's an image preview to avoid memory issues with large files
             if (isImagePreview) {
                 dataUrl = await fileToDataURL(file);
             }
@@ -208,7 +207,6 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Google Drive URL (Optional)</label>
                         <input type="url" name="googleDriveUrl" value={formData.googleDriveUrl || ''} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" placeholder="https://docs.google.com/..." />
-                        <p className="text-xs text-gray-500 mt-1">Provide a file download OR a Google Drive URL.</p>
                       </div>
                     </>
                 </div>
@@ -326,7 +324,6 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     );
 };
 
-
 const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, updateResource, deleteResource, adminUsername, updateCredentials }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('manage');
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -373,7 +370,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     }
   };
 
-
   const handleFormSubmit = async (resourceData: Omit<Resource, 'id' | 'downloadCount'> | Resource, file?: File) => {
     if ('id' in resourceData) {
       await updateResource(resourceData as Resource, file);
@@ -392,7 +388,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Delete this resource?')) {
-        await deleteResource(id);
+        await deleteResource(id, resources.find(r => r.id === id)!);
     }
   }
 
@@ -411,13 +407,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     setShowForm(true);
   }
 
-  const handleCopyId = async (id: string) => {
-    try {
-      // Robust copy method with fallback
+  // Improved robust copy mechanism
+  const handleCopyId = (id: string) => {
+    const performCopy = () => {
+      // 1. Try modern Clipboard API
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(id);
+        return navigator.clipboard.writeText(id);
       } else {
-        // Fallback for non-secure contexts (http) or older environments
+        // 2. Fallback to execCommand('copy') with a temporary textarea
         const textArea = document.createElement("textarea");
         textArea.value = id;
         textArea.style.position = "fixed";
@@ -426,18 +423,28 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        const successful = document.execCommand('copy');
-        textArea.remove();
-        if (!successful) throw new Error('Copy command failed');
+        try {
+          const successful = document.execCommand('copy');
+          textArea.remove();
+          return successful ? Promise.resolve() : Promise.reject();
+        } catch (err) {
+          textArea.remove();
+          return Promise.reject(err);
+        }
       }
-      
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy text:', err);
-      alert('Failed to copy. Please select the ID manually.');
-    }
-  }
+    };
+
+    performCopy()
+      .then(() => {
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+      })
+      .catch((err) => {
+        console.error('Copy failed:', err);
+        // Manual fallback alert for extreme cases
+        alert(`Copy failed. Please copy this ID manually: ${id}`);
+      });
+  };
   
   const downloadSignupsAsCSV = useCallback((resource: Resource) => {
     const signups = leads.filter(lead => lead.resourceId === resource.id);
@@ -478,34 +485,37 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-      <h1 className="text-3xl font-bold text-slate mb-6">Admin Dashboard</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <h1 className="text-3xl font-bold text-slate">Admin Dashboard</h1>
+        {!showForm && activeTab === 'manage' && (
+          <button onClick={handleAddNew} className="px-5 py-2 text-sm font-bold text-white bg-primary rounded-lg hover:bg-primary-dark shadow-md active:scale-95 transition-all">
+              + Add New Resource
+          </button>
+        )}
+      </div>
+
       <div className="border-b border-gray-300">
         <div className="flex space-x-2 -mb-px">
-          <TabButton tab="manage" label="Manage Resources" />
+          <TabButton tab="manage" label="Resources" />
           <TabButton tab="integrations" label="Integrations" />
-          <TabButton tab="embed" label="Embed Instructions" />
+          <TabButton tab="embed" label="Embed Site" />
           <TabButton tab="settings" label="Settings" />
         </div>
       </div>
+
       <div className="mt-6">
         {activeTab === 'manage' && (
             <div>
-                 {showForm ? (
+                 {showForm && (
                     <ResourceForm 
                         onSubmit={handleFormSubmit} 
                         initialData={editingResource}
                         onCancel={handleCancelForm}
                     />
-                 ) : (
-                    <div className="text-right mb-6">
-                        <button onClick={handleAddNew} className="px-5 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark shadow-sm">
-                            Add New Resource
-                        </button>
-                    </div>
                  )}
 
                 <div>
-                    <h3 className="text-2xl font-semibold text-slate mb-4">Existing Resources</h3>
+                    <h3 className="text-xl font-bold text-slate mb-6">Library Content</h3>
                     {resources.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {resources.map(resource => {
@@ -513,85 +523,80 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                             const isCurrentlyCopied = copiedId === resource.id;
                             
                             return (
-                            <div key={resource.id} className="relative bg-white rounded-lg shadow-md border flex flex-col transition-all hover:border-primary/30">
-                                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                            <div key={resource.id} className="relative bg-white rounded-xl shadow-md border border-gray-100 flex flex-col transition-all hover:shadow-lg">
+                                <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
                                     {isScheduled && (
-                                        <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                                            <ClockIcon className="w-2.5 h-2.5"/>
+                                        <span className="bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
                                             Scheduled
                                         </span>
                                     )}
                                     {resource.isComingSoon && (
-                                        <div className="bg-yellow-400 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                        <div className="bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
                                             Coming Soon
                                         </div>
                                     )}
                                 </div>
                                 
                                 {resource.isHidden && (
-                                    <div className="absolute top-2 right-2 bg-slate/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm">
+                                    <div className="absolute top-3 right-3 bg-slate text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded z-10 shadow-sm opacity-90">
                                         Hidden
                                     </div>
                                 )}
                                 
-                                <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-lg" />
+                                <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-xl" />
                                 
                                 <div className="p-4 flex flex-col flex-grow">
-                                    <h4 className="font-bold text-slate truncate" title={resource.title}>{resource.title}</h4>
-                                    <p className="text-xs text-gray-500 mb-3">{resource.category}</p>
+                                    <h4 className="font-bold text-slate leading-tight mb-1 truncate" title={resource.title}>{resource.title}</h4>
+                                    <p className="text-[10px] uppercase font-bold text-gray-400 mb-4 tracking-wider">{resource.category}</p>
                                     
-                                    {/* Prominent Resource ID Display */}
-                                    <div className="mb-4 relative group/id">
-                                        <div className="flex flex-col gap-1">
-                                          <div className="flex items-center justify-between">
-                                              <span className="text-[10px] uppercase font-black text-slate/50 tracking-wider">Embed ID</span>
-                                              {isCurrentlyCopied && (
-                                                  <span className="text-[10px] font-bold text-green-600 animate-bounce">Copied!</span>
-                                              )}
-                                          </div>
+                                    {/* SELECTABLE EMBED ID BLOCK */}
+                                    <div className="mb-5">
+                                      <div className="flex items-center justify-between mb-1">
+                                          <span className="text-[10px] uppercase font-black text-slate/40 tracking-widest">Embed ID</span>
+                                          {isCurrentlyCopied && (
+                                              <span className="text-[10px] font-bold text-green-600 animate-pulse">COPIED!</span>
+                                          )}
+                                      </div>
+                                      <div className="flex items-stretch gap-1">
+                                          <input
+                                            readOnly
+                                            value={resource.id}
+                                            onClick={(e) => (e.target as HTMLInputElement).select()}
+                                            title="Click to select ID"
+                                            className={`flex-grow text-[11px] font-mono p-2 bg-gray-50 border rounded-l-lg transition-all outline-none cursor-text ${isCurrentlyCopied ? 'border-green-300 text-green-700 bg-green-50' : 'border-gray-200 text-primary focus:border-primary/50'}`}
+                                          />
                                           <button 
                                               onClick={() => handleCopyId(resource.id)}
-                                              className={`flex items-center justify-between w-full p-2 rounded border transition-all duration-200 text-left active:scale-[0.98] ${isCurrentlyCopied ? 'bg-green-50 border-green-300 ring-2 ring-green-100' : 'bg-gray-50 border-gray-200 hover:border-primary/50 hover:bg-blue-50/50'}`}
-                                              title="Click to copy ID"
+                                              className={`px-3 border border-l-0 rounded-r-lg transition-all flex items-center justify-center group/copy ${isCurrentlyCopied ? 'bg-green-600 border-green-600 text-white' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200 hover:text-primary'}`}
+                                              title="Copy to clipboard"
                                           >
-                                              <code className={`text-xs font-mono truncate max-w-[150px] ${isCurrentlyCopied ? 'text-green-700' : 'text-primary'}`}>
-                                                  {resource.id}
-                                              </code>
-                                              <CopyIcon className={`w-3.5 h-3.5 ${isCurrentlyCopied ? 'text-green-600' : 'text-gray-400 group-hover/id:text-primary'}`} />
+                                              <CopyIcon className="w-3.5 h-3.5" />
                                           </button>
-                                        </div>
+                                      </div>
                                     </div>
 
-                                    <div className="mt-auto pt-3 border-t flex items-center justify-between">
+                                    <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
                                         <div className="flex flex-col">
-                                            <div className="flex items-center text-xs text-gray-600 font-medium">
+                                            <div className="flex items-center text-sm font-bold text-slate">
                                                 <DownloadIcon className="w-3.5 h-3.5 mr-1 text-primary"/>
                                                 <span>{(resource.downloadCount || 0).toLocaleString()}</span>
                                             </div>
-                                            <span className="text-[10px] text-gray-400 uppercase font-bold">{resource.isComingSoon ? 'Leads' : 'DLs'}</span>
+                                            <span className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">{resource.isComingSoon ? 'Leads' : 'Downloads'}</span>
                                         </div>
                                         
-                                        <div className="flex items-center gap-0.5">
+                                        <div className="flex items-center gap-1">
                                             {resource.isComingSoon && (
-                                                <button 
-                                                    onClick={() => downloadSignupsAsCSV(resource)} 
-                                                    className="p-1.5 text-gray-500 hover:text-green-600 transition-colors rounded-full hover:bg-green-50" 
-                                                    title="Download Leads CSV"
-                                                >
+                                                <button onClick={() => downloadSignupsAsCSV(resource)} className="p-2 text-gray-400 hover:text-green-600 transition-colors rounded-lg hover:bg-green-50" title="CSV">
                                                     <UsersIcon className="w-4 h-4" />
                                                 </button>
                                             )}
-                                            <button 
-                                                onClick={() => handleToggleVisibility(resource)} 
-                                                className={`p-1.5 transition-colors rounded-full ${resource.isHidden ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`} 
-                                                title={resource.isHidden ? 'Unhide' : 'Hide'}
-                                            >
+                                            <button onClick={() => handleToggleVisibility(resource)} className={`p-2 transition-colors rounded-lg ${resource.isHidden ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Toggle Hide">
                                                 {resource.isHidden ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                                             </button>
-                                            <button onClick={() => handleEdit(resource)} className="p-1.5 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50" title="Edit">
+                                            <button onClick={() => handleEdit(resource)} className="p-2 text-gray-400 hover:text-primary transition-colors rounded-lg hover:bg-blue-50" title="Edit">
                                                 <EditIcon className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => handleDelete(resource.id)} className="p-1.5 text-gray-500 hover:text-red-600 transition-colors rounded-full hover:bg-red-50" title="Delete">
+                                            <button onClick={() => handleDelete(resource.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50" title="Delete">
                                                 <DeleteIcon className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -601,131 +606,138 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                         )})}
                     </div>
                      ) : (
-                        <div className="text-center py-24 border-dashed border-2 border-gray-200 rounded-xl bg-gray-50/50">
-                            <h2 className="text-xl font-semibold text-slate/70">No Resources Found</h2>
-                            <p className="text-gray-500 mt-2">Start by adding your first financial resource.</p>
-                            <button onClick={handleAddNew} className="mt-4 px-6 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary-dark">Add New</button>
+                        <div className="text-center py-24 border-dashed border-2 border-gray-200 rounded-2xl bg-gray-50/50">
+                            <h2 className="text-xl font-bold text-slate/50">Your library is empty</h2>
+                            <button onClick={handleAddNew} className="mt-4 px-8 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark">Add First Resource</button>
                         </div>
                     )}
                 </div>
             </div>
         )}
         {activeTab === 'integrations' && (
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-4xl">
-            <h2 className="text-2xl font-bold text-slate mb-4">Integrations</h2>
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-4xl">
+            <h2 className="text-2xl font-bold text-slate mb-6">External Integrations</h2>
             <div className="space-y-6">
-                <section className="p-6 bg-blue-50/50 rounded-lg border border-blue-100">
-                    <h3 className="text-lg font-bold text-primary mb-2">ConvertKit Lead Capture</h3>
-                    <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                        To sync your signups with ConvertKit, you can connect your API key in the code. 
-                        Currently, leads are captured in Firebase and available for CSV download.
+                <div className="p-6 bg-blue-50/50 rounded-xl border border-blue-100">
+                    <h3 className="text-lg font-bold text-primary mb-3">ConvertKit Flow</h3>
+                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                        Leads are currently captured in your Firebase database. To automate emails, you can export the CSV on each card or connect your ConvertKit API key directly in <code>services/api.ts</code>.
                     </p>
-                    <div className="bg-slate rounded-lg p-4 overflow-x-auto">
-                        <pre className="text-xs text-blue-100"><code>{`// In services/api.ts
+                    <div className="bg-slate rounded-xl p-5 shadow-inner">
+                        <pre className="text-[11px] text-blue-100 font-mono leading-relaxed"><code>{`// Sync lead with ConvertKit API
 export const addLead = async (leadData) => {
-  // Add ConvertKit API call here
-  return await fetch('https://api.convertkit.com/v3/forms/YOUR_ID/subscribe', {
+  const CK_FORM_ID = 'YOUR_FORM_ID';
+  const CK_API_KEY = 'YOUR_API_KEY';
+  
+  await fetch(\`https://api.convertkit.com/v3/forms/\${CK_FORM_ID}/subscribe\`, {
     method: 'POST',
-    body: JSON.stringify(leadData)
+    body: JSON.stringify({ api_key: CK_API_KEY, ...leadData })
   });
 };`}</code></pre>
                     </div>
-                </section>
+                </div>
             </div>
           </div>
         )}
         {activeTab === 'embed' && (
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-4xl">
-            <h2 className="text-2xl font-bold text-slate mb-6">Embed for WordPress</h2>
-            <div className="space-y-8">
-              <div>
-                <h3 className="font-bold text-slate mb-3 flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 bg-primary text-white text-xs rounded-full">1</span>
-                    Embed the Whole Library
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">Paste this into a Custom HTML block in WordPress to show all resources.</p>
-                <div className="bg-slate rounded-lg p-4 relative group">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-4xl">
+            <h2 className="text-2xl font-bold text-slate mb-6">Embedding Instructions</h2>
+            <div className="space-y-10">
+              <section>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">1</div>
+                  <h3 className="text-lg font-bold text-slate">Full Library Embed</h3>
+                </div>
+                <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page. It will automatically resize to fit perfectly.</p>
+                <div className="ml-11 relative group bg-slate rounded-xl p-5">
                     <button 
-                        onClick={() => handleCopyId(`<div id="bp-money-library-root"></div>\n<script src="${window.location.origin}/embed-loader.js"></script>`)}
-                        className="absolute top-2 right-2 p-1.5 bg-white/10 text-white rounded hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="${window.location.origin}/embed.js"></script>`)}
+                        className="absolute top-4 right-4 p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                        title="Copy Script"
                     >
                         <CopyIcon className="w-4 h-4" />
                     </button>
-                    <pre className="text-xs text-blue-100 overflow-x-auto"><code>{`<div id="bp-money-library-root" style="width:100%"></div>
+                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>
 <script>
-  // Add the provided loader script here
+  // Add library loader script here...
 </script>`}</code></pre>
                 </div>
-              </div>
+              </section>
 
-              <div>
-                <h3 className="font-bold text-slate mb-3 flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 bg-primary text-white text-xs rounded-full">2</span>
-                    Embed a Single Resource Card
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">Use the <strong>Embed ID</strong> found on each resource card above with the single-resource embed script.</p>
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 text-sm text-amber-800">
-                    <strong>Tip:</strong> Single resource embeds are "headless," meaning they don't show the site header or footer, making them perfect for landing pages.
+              <section>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">2</div>
+                  <h3 className="text-lg font-bold text-slate">Single Resource Landing Page</h3>
                 </div>
-              </div>
+                <p className="text-sm text-gray-500 mb-6 ml-11">Embed just one specific card by copying its <strong>Embed ID</strong> from the Resources tab and using it in your landing page script.</p>
+                <div className="ml-11 p-5 bg-amber-50 rounded-xl border border-amber-200">
+                    <p className="text-sm font-bold text-amber-900 mb-1 flex items-center gap-2">
+                        <ClockIcon className="w-4 h-4" />
+                        Quick Start:
+                    </p>
+                    <p className="text-xs text-amber-800 italic">
+                        The single-resource view is "headless" (no headers/footers), designed to blend seamlessly into your existing WordPress layouts.
+                    </p>
+                </div>
+              </section>
             </div>
           </div>
         )}
         {activeTab === 'settings' && (
-           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold text-slate mb-1">Admin Settings</h2>
-            <p className="text-gray-500 mb-8 text-sm">Update your access credentials.</p>
-            <form onSubmit={handleSettingsSubmit} className="space-y-5">
+           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-xl mx-auto">
+            <h2 className="text-2xl font-bold text-slate mb-2">Access Control</h2>
+            <p className="text-sm text-gray-400 mb-8">Change the credentials used to manage this library.</p>
+            <form onSubmit={handleSettingsSubmit} className="space-y-6">
               <div>
-                <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">New Username</label>
+                <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">Admin Username</label>
                 <input 
                   type="text" 
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
-                  className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
+                  className="block w-full border-gray-200 rounded-xl shadow-sm focus:ring-primary focus:border-primary text-sm p-3"
                   required
                 />
               </div>
                <div>
-                <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">Current Password</label>
+                <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">Current Password</label>
                 <input 
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
-                  placeholder="Required to save changes"
+                  className="block w-full border-gray-200 rounded-xl shadow-sm focus:ring-primary focus:border-primary text-sm p-3"
+                  placeholder="Verify your identity"
                   required
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">New Password</label>
+                    <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">New Password</label>
                     <input 
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
+                      className="block w-full border-gray-200 rounded-xl shadow-sm focus:ring-primary focus:border-primary text-sm p-3"
                       required
                     />
                   </div>
                    <div>
-                    <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">Confirm</label>
+                    <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">Confirm New</label>
                     <input 
                       type="password" 
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
+                      className="block w-full border-gray-200 rounded-xl shadow-sm focus:ring-primary focus:border-primary text-sm p-3"
                       required
                     />
                   </div>
               </div>
               
-              {settingsError && <p className="text-xs text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{settingsError}</p>}
-              {settingsSuccess && <p className="text-xs text-green-600 bg-green-50 p-3 rounded-lg border border-green-100">{settingsSuccess}</p>}
+              {settingsError && <p className="text-xs text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 font-bold">{settingsError}</p>}
+              {settingsSuccess && <p className="text-xs text-green-600 bg-green-50 p-4 rounded-xl border border-green-100 font-bold">{settingsSuccess}</p>}
               
               <div className="pt-4 flex justify-end">
-                <button type="submit" className="px-8 py-2.5 text-sm font-bold text-white bg-primary rounded-lg hover:bg-primary-dark shadow-md active:scale-95 transition-all disabled:opacity-50" disabled={isUpdatingCreds}>
-                  {isUpdatingCreds ? 'Updating...' : 'Update Access'}
+                <button type="submit" className="px-10 py-3 text-sm font-black uppercase tracking-widest text-white bg-primary rounded-xl hover:bg-primary-dark shadow-lg active:scale-95 transition-all disabled:opacity-50" disabled={isUpdatingCreds}>
+                  {isUpdatingCreds ? 'Saving...' : 'Update Credentials'}
                 </button>
               </div>
             </form>
