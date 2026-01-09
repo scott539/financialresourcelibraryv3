@@ -135,8 +135,6 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     const [submitError, setSubmitError] = useState<string>('');
     const isEditing = initialData && 'id' in initialData;
 
-    // The 'isComingSoon' status is now derived from whether a file or link is present.
-    // This provides clear, automatic feedback to the admin.
     const hasDownloadable = !!formData.fileUrl || !!formData.googleDriveUrl?.trim() || !!resourceFile;
     const isEffectivelyComingSoon = !hasDownloadable;
 
@@ -163,14 +161,12 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
     }
     
     const handleFileUpload = (file: File, dataUrl: string) => {
-        // We set fileName for display/DB, but fileUrl stays empty if it's a new file (we use resourceFile instead)
         setFormData(prev => ({ ...prev, fileUrl: dataUrl, fileName: file.name }));
         setResourceFile(file);
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('[AdminPage] Submitting form...');
         setIsSubmitting(true);
         setSubmitError('');
         
@@ -179,14 +175,11 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                 ...formData, 
                 isComingSoon: isEffectivelyComingSoon 
             };
-            console.log('[AdminPage] Calling onSubmit prop with data:', dataToSubmit);
             await onSubmit(dataToSubmit, resourceFile || undefined);
-            console.log('[AdminPage] Submission successful.');
         } catch (error: any) {
             console.error("[AdminPage] Error submitting resource:", error);
             setSubmitError(error.message || "An unexpected error occurred while saving. Please try again.");
         } finally {
-            console.log('[AdminPage] Resetting submitting state.');
             setIsSubmitting(false);
         }
     };
@@ -241,7 +234,6 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                             required 
                             maxLength={150}
                         />
-                        <p className="mt-1 text-xs text-gray-500">A brief summary helps maintain a clean and consistent look on resource cards.</p>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -292,7 +284,6 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                                     Clear
                                 </button>
                             </div>
-                            <p className="mt-1 text-xs text-gray-500">Resource will be hidden from public view until this date.</p>
                         </div>
                         <label className="flex items-center space-x-3 p-2 border rounded-md bg-gray-100 cursor-not-allowed">
                             <input
@@ -302,7 +293,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                                 readOnly
                                 className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                             />
-                            <span className="font-medium text-gray-700">"Coming Soon" (automatic if no file/link)</span>
+                            <span className="font-medium text-gray-700">"Coming Soon" (automatic)</span>
                         </label>
                         <label className="flex items-center space-x-3 cursor-pointer p-2 border rounded-md hover:bg-gray-50">
                             <input
@@ -336,15 +327,12 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
 };
 
 
-// --- Main Admin Page Component ---
-
 const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, updateResource, deleteResource, adminUsername, updateCredentials }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('manage');
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
-  // State for Settings tab
   const [currentPassword, setCurrentPassword] = useState('');
   const [newUsername, setNewUsername] = useState(adminUsername);
   const [newPassword, setNewPassword] = useState('');
@@ -376,12 +364,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     setIsUpdatingCreds(false);
 
     if (wasSuccessful) {
-      setSettingsSuccess('Credentials updated successfully! You may need to log in again on your next visit.');
+      setSettingsSuccess('Credentials updated successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } else {
-      setSettingsError('The "Current Password" you entered is incorrect.');
+      setSettingsError('Incorrect current password.');
     }
   };
 
@@ -403,11 +391,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
   }
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this resource?')) {
-        const resourceToDelete = resources.find(r => r.id === id);
-        if (resourceToDelete) {
-          await deleteResource(id);
-        }
+    if (window.confirm('Delete this resource?')) {
+        await deleteResource(id);
     }
   }
 
@@ -426,16 +411,38 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     setShowForm(true);
   }
 
-  const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopyId = async (id: string) => {
+    try {
+      // Robust copy method with fallback
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(id);
+      } else {
+        // Fallback for non-secure contexts (http) or older environments
+        const textArea = document.createElement("textarea");
+        textArea.value = id;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        textArea.remove();
+        if (!successful) throw new Error('Copy command failed');
+      }
+      
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+      alert('Failed to copy. Please select the ID manually.');
+    }
   }
   
   const downloadSignupsAsCSV = useCallback((resource: Resource) => {
     const signups = leads.filter(lead => lead.resourceId === resource.id);
     if (signups.length === 0) {
-      alert('No signups for this resource yet.');
+      alert('No signups yet.');
       return;
     }
 
@@ -470,7 +477,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
   );
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
       <h1 className="text-3xl font-bold text-slate mb-6">Admin Dashboard</h1>
       <div className="border-b border-gray-300">
         <div className="flex space-x-2 -mb-px">
@@ -503,83 +510,88 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {resources.map(resource => {
                             const isScheduled = resource.liveDate && resource.liveDate.toDate() > new Date();
+                            const isCurrentlyCopied = copiedId === resource.id;
+                            
                             return (
-                            <div key={resource.id} className="relative bg-white rounded-lg shadow-md border flex flex-col">
+                            <div key={resource.id} className="relative bg-white rounded-lg shadow-md border flex flex-col transition-all hover:border-primary/30">
                                 <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
                                     {isScheduled && (
-                                        <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                                            <ClockIcon className="w-3 h-3"/>
+                                        <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                            <ClockIcon className="w-2.5 h-2.5"/>
                                             Scheduled
                                         </span>
                                     )}
                                     {resource.isComingSoon && (
-                                        <div className="bg-yellow-400 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">
+                                        <div className="bg-yellow-400 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                                             Coming Soon
                                         </div>
                                     )}
                                 </div>
+                                
                                 {resource.isHidden && (
-                                    <div className="absolute top-2 right-2 bg-slate text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                                    <div className="absolute top-2 right-2 bg-slate/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm">
                                         Hidden
                                     </div>
                                 )}
+                                
                                 <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-lg" />
+                                
                                 <div className="p-4 flex flex-col flex-grow">
-                                    <h4 className="font-bold text-slate truncate">{resource.title}</h4>
-                                    <p className="text-xs text-gray-500 mb-2">{resource.category}</p>
+                                    <h4 className="font-bold text-slate truncate" title={resource.title}>{resource.title}</h4>
+                                    <p className="text-xs text-gray-500 mb-3">{resource.category}</p>
                                     
-                                    {/* Resource ID Display */}
-                                    <div className="mb-3 p-1.5 bg-gray-50 rounded border border-gray-100 flex items-center justify-between group/id">
-                                        <div className="flex flex-col">
-                                          <span className="text-[10px] uppercase font-bold text-gray-400 leading-tight">Resource ID</span>
-                                          <code className="text-xs font-mono text-primary truncate max-w-[140px]">{resource.id}</code>
+                                    {/* Prominent Resource ID Display */}
+                                    <div className="mb-4 relative group/id">
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center justify-between">
+                                              <span className="text-[10px] uppercase font-black text-slate/50 tracking-wider">Embed ID</span>
+                                              {isCurrentlyCopied && (
+                                                  <span className="text-[10px] font-bold text-green-600 animate-bounce">Copied!</span>
+                                              )}
+                                          </div>
+                                          <button 
+                                              onClick={() => handleCopyId(resource.id)}
+                                              className={`flex items-center justify-between w-full p-2 rounded border transition-all duration-200 text-left active:scale-[0.98] ${isCurrentlyCopied ? 'bg-green-50 border-green-300 ring-2 ring-green-100' : 'bg-gray-50 border-gray-200 hover:border-primary/50 hover:bg-blue-50/50'}`}
+                                              title="Click to copy ID"
+                                          >
+                                              <code className={`text-xs font-mono truncate max-w-[150px] ${isCurrentlyCopied ? 'text-green-700' : 'text-primary'}`}>
+                                                  {resource.id}
+                                              </code>
+                                              <CopyIcon className={`w-3.5 h-3.5 ${isCurrentlyCopied ? 'text-green-600' : 'text-gray-400 group-hover/id:text-primary'}`} />
+                                          </button>
                                         </div>
-                                        <button 
-                                          onClick={() => handleCopyId(resource.id)}
-                                          className={`p-1.5 rounded transition-colors ${copiedId === resource.id ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                                          title="Copy ID for Embedding"
-                                        >
-                                          {copiedId === resource.id ? (
-                                            <span className="text-[10px] font-bold px-1">COPIED</span>
-                                          ) : (
-                                            <CopyIcon className="w-3.5 h-3.5" />
-                                          )}
-                                        </button>
                                     </div>
 
-                                    {isScheduled && (
-                                        <p className="text-xs text-blue-700 font-medium my-1">
-                                            Live: {resource.liveDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                                        </p>
-                                    )}
-                                    <div className="mt-auto flex justify-between items-center pt-2 border-t">
-                                        <div className="flex items-center text-sm text-gray-600">
-                                            <DownloadIcon className="w-4 h-4 mr-1"/>
-                                            <span>{(resource.downloadCount || 0).toLocaleString()} {resource.isComingSoon ? 'Signups' : 'Downloads'}</span>
+                                    <div className="mt-auto pt-3 border-t flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center text-xs text-gray-600 font-medium">
+                                                <DownloadIcon className="w-3.5 h-3.5 mr-1 text-primary"/>
+                                                <span>{(resource.downloadCount || 0).toLocaleString()}</span>
+                                            </div>
+                                            <span className="text-[10px] text-gray-400 uppercase font-bold">{resource.isComingSoon ? 'Leads' : 'DLs'}</span>
                                         </div>
-                                        <div className="flex items-center space-x-1">
+                                        
+                                        <div className="flex items-center gap-0.5">
                                             {resource.isComingSoon && (
                                                 <button 
                                                     onClick={() => downloadSignupsAsCSV(resource)} 
-                                                    className="p-2 text-gray-500 hover:text-green-600 transition-colors rounded-full hover:bg-green-100" 
-                                                    aria-label="Download Signups CSV"
-                                                    title="Download Signups CSV"
+                                                    className="p-1.5 text-gray-500 hover:text-green-600 transition-colors rounded-full hover:bg-green-50" 
+                                                    title="Download Leads CSV"
                                                 >
                                                     <UsersIcon className="w-4 h-4" />
                                                 </button>
                                             )}
                                             <button 
                                                 onClick={() => handleToggleVisibility(resource)} 
-                                                className="p-2 text-gray-500 hover:text-indigo-600 transition-colors rounded-full hover:bg-indigo-100" 
-                                                aria-label={resource.isHidden ? 'Make visible' : 'Hide resource'}
-                                                title={resource.isHidden ? 'Make visible' : 'Hide resource'}
+                                                className={`p-1.5 transition-colors rounded-full ${resource.isHidden ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`} 
+                                                title={resource.isHidden ? 'Unhide' : 'Hide'}
                                             >
                                                 {resource.isHidden ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                                             </button>
-                                            <button onClick={() => handleEdit(resource)} className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-100" aria-label="Edit">
+                                            <button onClick={() => handleEdit(resource)} className="p-1.5 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-blue-50" title="Edit">
                                                 <EditIcon className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => handleDelete(resource.id)} className="p-2 text-gray-500 hover:text-red-600 transition-colors rounded-full hover:bg-red-100" aria-label="Delete">
+                                            <button onClick={() => handleDelete(resource.id)} className="p-1.5 text-gray-500 hover:text-red-600 transition-colors rounded-full hover:bg-red-50" title="Delete">
                                                 <DeleteIcon className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -589,173 +601,131 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                         )})}
                     </div>
                      ) : (
-                        <div className="text-center py-16 border-dashed border-2 border-gray-300 rounded-lg">
-                            <h2 className="text-xl font-semibold text-slate">No Resources Yet</h2>
-                            <p className="text-gray-500 mt-1">Click "Add New Resource" to get started.</p>
+                        <div className="text-center py-24 border-dashed border-2 border-gray-200 rounded-xl bg-gray-50/50">
+                            <h2 className="text-xl font-semibold text-slate/70">No Resources Found</h2>
+                            <p className="text-gray-500 mt-2">Start by adding your first financial resource.</p>
+                            <button onClick={handleAddNew} className="mt-4 px-6 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary-dark">Add New</button>
                         </div>
                     )}
                 </div>
             </div>
         )}
         {activeTab === 'integrations' && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-2xl font-bold text-slate mb-4">ConvertKit Integration</h2>
-            <div className="prose max-w-none">
-                <p>To integrate this library with ConvertKit, you would typically modify the lead capture service.</p>
-                <ol>
-                    <li>In <code>services/api.ts</code>, replace the mock <code>addSubscriber</code> function with a real API call to ConvertKit.</li>
-                    <li>You would need to use your ConvertKit API key and the ID of the form or tag you want to add subscribers to.</li>
-                    <li>The function would make a POST request to the ConvertKit API endpoint, sending the subscriber's email and first name.</li>
-                    <li>Ensure you handle API errors gracefully, providing feedback to the user if the subscription fails.</li>
-                </ol>
-                <pre><code className="language-javascript">
-{`// Example of a real addSubscriber function
-const CONVERTKIT_API_KEY = 'your_api_key';
-const CONVERTKIT_FORM_ID = 'your_form_id';
-
-export const addLead = async (resourceId, leadData) => {
-  // Your API call to ConvertKit
-  const response = await fetch(\`https://api.convertkit.com/v3/forms/\${CONVERTKIT_FORM_ID}/subscribe\`, {
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-4xl">
+            <h2 className="text-2xl font-bold text-slate mb-4">Integrations</h2>
+            <div className="space-y-6">
+                <section className="p-6 bg-blue-50/50 rounded-lg border border-blue-100">
+                    <h3 className="text-lg font-bold text-primary mb-2">ConvertKit Lead Capture</h3>
+                    <p className="text-gray-600 mb-4 text-sm leading-relaxed">
+                        To sync your signups with ConvertKit, you can connect your API key in the code. 
+                        Currently, leads are captured in Firebase and available for CSV download.
+                    </p>
+                    <div className="bg-slate rounded-lg p-4 overflow-x-auto">
+                        <pre className="text-xs text-blue-100"><code>{`// In services/api.ts
+export const addLead = async (leadData) => {
+  // Add ConvertKit API call here
+  return await fetch('https://api.convertkit.com/v3/forms/YOUR_ID/subscribe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      api_key: CONVERTKIT_API_KEY,
-      email: leadData.email,
-      first_name: leadData.firstName,
-      // You can also add tags here
-    }),
+    body: JSON.stringify(leadData)
   });
-  // After the API call, you would still update your local data
-  // to reflect the new lead and download count.
-  // ... (localStorage logic) ...
-  return response.json();
-};`}
-                </code></pre>
+};`}</code></pre>
+                    </div>
+                </section>
             </div>
           </div>
         )}
         {activeTab === 'embed' && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-2xl font-bold text-slate mb-4">Embed Instructions for WordPress</h2>
-            <div className="prose max-w-none">
-              <p>You can easily embed this Financial Resource Library into your WordPress site by adding a simple script. This will place the entire application within your page or post, and it will <strong>automatically resize</strong> to fit the content.</p>
-              <h4>Steps:</h4>
-              <ol>
-                <li>Navigate to the editor for the page or post where you want to add the library.</li>
-                <li>Add a new <strong>"Custom HTML"</strong> block to your content.</li>
-                <li>Copy and paste the following code into the Custom HTML block.</li>
-              </ol>
-              <pre><code className="language-javascript">
-{`<div id="financial-library-embed"></div>
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-4xl">
+            <h2 className="text-2xl font-bold text-slate mb-6">Embed for WordPress</h2>
+            <div className="space-y-8">
+              <div>
+                <h3 className="font-bold text-slate mb-3 flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 bg-primary text-white text-xs rounded-full">1</span>
+                    Embed the Whole Library
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">Paste this into a Custom HTML block in WordPress to show all resources.</p>
+                <div className="bg-slate rounded-lg p-4 relative group">
+                    <button 
+                        onClick={() => handleCopyId(`<div id="bp-money-library-root"></div>\n<script src="${window.location.origin}/embed-loader.js"></script>`)}
+                        className="absolute top-2 right-2 p-1.5 bg-white/10 text-white rounded hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <CopyIcon className="w-4 h-4" />
+                    </button>
+                    <pre className="text-xs text-blue-100 overflow-x-auto"><code>{`<div id="bp-money-library-root" style="width:100%"></div>
 <script>
-  (function() {
-    var container = document.getElementById('financial-library-embed');
-    if (!container) return;
+  // Add the provided loader script here
+</script>`}</code></pre>
+                </div>
+              </div>
 
-    var iframe = document.createElement('iframe');
-    var appUrl = 'URL_OF_THIS_APP'; // <-- IMPORTANT: Update this URL
-
-    iframe.src = appUrl;
-    iframe.width = '100%';
-    iframe.scrolling = 'no'; // Disable iframe's own scrollbar
-    iframe.style.border = 'none';
-    iframe.style.height = '800px'; // Set an initial height
-    iframe.title = 'Financial Resource Library';
-    
-    container.innerHTML = '';
-    container.appendChild(iframe);
-
-    // Listen for height updates from the embedded app
-    window.addEventListener('message', function(event) {
-      // Security: Check if the message comes from the expected app URL
-      try {
-        var appOrigin = new URL(appUrl).origin;
-        if (event.origin !== appOrigin) {
-          return;
-        }
-      } catch (e) {
-        console.warn('Embed script: Please replace "URL_OF_THIS_APP" with a valid URL to enable dynamic resizing.');
-        return;
-      }
-
-      // Check if the message contains the expected data
-      if (event.data && event.data.type === 'financial-library-resize' && typeof event.data.height === 'number') {
-        iframe.style.height = event.data.height + 'px';
-      }
-    });
-  })();
-<\/script>`}
-              </code></pre>
-              <h4>Customization Tips:</h4>
-              <ul>
-                <li><strong>Important:</strong> Replace <code>URL_OF_THIS_APP</code> with the actual public URL where this application is hosted. The dynamic height adjustment will not work until this is set to a valid URL.</li>
-                <li>The script includes a default height of 800px, which will be used while the app loads.</li>
-                <li>The script will automatically create a responsive iframe that fills the width of its container on your page and adjusts its height to prevent internal scrollbars.</li>
-              </ul>
-              <h4 className="mt-6">Troubleshooting</h4>
-              <p><strong>My Website's Menu Covers the App</strong></p>
-              <p>If your website has a "sticky" or "fixed" header that stays at the top when you scroll, it might cover the top part of the embedded app. This is a common issue and is easy to fix on your WordPress page:</p>
-              <ul>
-                <li><strong>No-Code Solution:</strong> Add a <strong>"Spacer" block</strong> in the WordPress editor right before the "Custom HTML" block you used for the app. Adjust the Spacer's height until the app appears correctly below your menu.</li>
-                <li><strong>CSS Solution:</strong> A web developer can add a CSS style like <code>margin-top: 80px;</code> to the block that contains the embed script. The `80px` value should be the height of your website's header.</li>
-              </ul>
+              <div>
+                <h3 className="font-bold text-slate mb-3 flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 bg-primary text-white text-xs rounded-full">2</span>
+                    Embed a Single Resource Card
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">Use the <strong>Embed ID</strong> found on each resource card above with the single-resource embed script.</p>
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 text-sm text-amber-800">
+                    <strong>Tip:</strong> Single resource embeds are "headless," meaning they don't show the site header or footer, making them perfect for landing pages.
+                </div>
+              </div>
             </div>
           </div>
         )}
         {activeTab === 'settings' && (
-           <div className="bg-white p-6 rounded-lg shadow-sm border max-w-2xl mx-auto">
+           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-xl mx-auto">
             <h2 className="text-2xl font-bold text-slate mb-1">Admin Settings</h2>
-            <p className="text-gray-500 mb-6">Update the username and password used to access the admin dashboard.</p>
-            <form onSubmit={handleSettingsSubmit} className="space-y-4">
+            <p className="text-gray-500 mb-8 text-sm">Update your access credentials.</p>
+            <form onSubmit={handleSettingsSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700">New Username</label>
+                <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">New Username</label>
                 <input 
                   type="text" 
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                  className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
                   required
                 />
               </div>
                <div>
-                <label className="block text-sm font-medium text-gray-700">Current Password</label>
+                <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">Current Password</label>
                 <input 
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Enter current password to make changes"
+                  className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
+                  placeholder="Required to save changes"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">New Password</label>
-                <input 
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Leave blank to keep current password"
-                  required
-                />
-              </div>
-               <div>
-                <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
-                <input 
-                  type="password" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">New Password</label>
+                    <input 
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
+                      required
+                    />
+                  </div>
+                   <div>
+                    <label className="block text-xs font-black text-slate/50 uppercase tracking-widest mb-1.5">Confirm</label>
+                    <input 
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-primary focus:border-primary text-sm p-2.5"
+                      required
+                    />
+                  </div>
               </div>
               
-              {settingsError && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{settingsError}</p>}
-              {settingsSuccess && <p className="text-sm text-green-600 bg-green-50 p-3 rounded-md">{settingsSuccess}</p>}
+              {settingsError && <p className="text-xs text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{settingsError}</p>}
+              {settingsSuccess && <p className="text-xs text-green-600 bg-green-50 p-3 rounded-lg border border-green-100">{settingsSuccess}</p>}
               
-              <div className="pt-2 flex justify-end">
-                <button type="submit" className="px-5 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark shadow-sm disabled:opacity-50" disabled={isUpdatingCreds}>
-                  {isUpdatingCreds ? 'Updating...' : 'Update Credentials'}
+              <div className="pt-4 flex justify-end">
+                <button type="submit" className="px-8 py-2.5 text-sm font-bold text-white bg-primary rounded-lg hover:bg-primary-dark shadow-md active:scale-95 transition-all disabled:opacity-50" disabled={isUpdatingCreds}>
+                  {isUpdatingCreds ? 'Updating...' : 'Update Access'}
                 </button>
               </div>
             </form>
