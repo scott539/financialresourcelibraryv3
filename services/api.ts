@@ -1,4 +1,5 @@
 
+
 import { Lead, Resource } from '../types';
 import { auth, db, storage } from '../firebaseConfig';
 import {
@@ -62,15 +63,27 @@ const uploadFile = async (file: File | Blob | string, path: string, fileName: st
     };
     
     try {
-        if (file instanceof File || file instanceof Blob) {
-            console.log(`[API] Uploading as bytes (File/Blob)... size: ${(file as any).size}`);
-            await uploadBytes(storageRef, file, metadata);
-        } else {
-            console.log('[API] Uploading as base64 string...');
-            await uploadString(storageRef, file, 'data_url', metadata);
-        }
-        console.log(`[API] Upload successful for ${fileName}, getting download URL...`);
-        const url = await getDownloadURL(storageRef);
+        // Wrap the upload process in a Promise.race to handle timeouts (often due to CORS)
+        const uploadTask = async () => {
+            if (file instanceof File || file instanceof Blob) {
+                console.log(`[API] Uploading as bytes (File/Blob)... size: ${(file as any).size}`);
+                await uploadBytes(storageRef, file, metadata);
+            } else {
+                console.log('[API] Uploading as base64 string...');
+                await uploadString(storageRef, file, 'data_url', metadata);
+            }
+            console.log(`[API] Upload successful for ${fileName}, getting download URL...`);
+            return await getDownloadURL(storageRef);
+        };
+
+        const timeoutTask = new Promise<string>((_, reject) => {
+            setTimeout(() => {
+                reject(new Error("Upload timed out. This is usually caused by a missing CORS configuration in Firebase Storage. Please check the 'Integrations' tab in the Admin Dashboard or your Cloud Console."));
+            }, 30000); // 30 second timeout
+        });
+
+        const url = await Promise.race([uploadTask(), timeoutTask]);
+        
         console.log(`[API] Got download URL for ${fileName}`);
         return url;
     } catch (error) {

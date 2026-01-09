@@ -1,0 +1,65 @@
+
+import React from 'react';
+import { useParams, Navigate } from 'react-router-dom';
+import { Resource } from '../types';
+import { DownloadIcon, LinkIcon } from '../components/icons';
+
+interface EmbedResourcePageProps {
+  resources: Resource[];
+  onDownload: (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => Promise<void>;
+  onGoogleDriveClick: (resourceId: string) => void;
+}
+
+const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDownload, onGoogleDriveClick }) => {
+  const { id } = useParams<{ id: string }>();
+  const resource = resources.find(r => r.id === id);
+
+  if (!resource) return <Navigate to="/" />;
+
+  const handleAction = async () => {
+    const lead = { firstName: 'Embed User', email: 'embed@user.com', hasConsented: true };
+    await onDownload(resource.id, lead);
+  };
+
+  return (
+    <div className="bg-white p-4 sm:p-6 border rounded-xl shadow-sm max-w-2xl mx-auto overflow-hidden">
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="w-full md:w-1/3">
+          <img 
+            src={resource.imageUrl} 
+            alt={resource.title} 
+            className="w-full aspect-square object-cover rounded-lg shadow-sm"
+          />
+        </div>
+        <div className="w-full md:w-2/3 flex flex-col justify-center">
+          <h2 className="text-2xl font-bold text-slate mb-2">{resource.title}</h2>
+          <p className="text-gray-600 text-sm mb-4 line-clamp-3">{resource.description}</p>
+          
+          <div className="flex flex-col gap-2">
+            {resource.googleDriveUrl && (
+              <a
+                href={resource.googleDriveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => onGoogleDriveClick(resource.id)}
+                className="w-full text-center bg-white text-blue-600 px-4 py-2 rounded-md shadow-sm flex items-center justify-center gap-2 transition-all duration-300 hover:bg-blue-50 border border-gray-300"
+              >
+                <LinkIcon className="w-4 h-4" />
+                <span className="text-sm font-bold">Open in Google Drive</span>
+              </a>
+            )}
+            <button
+              onClick={handleAction}
+              className="w-full text-center bg-primary text-white px-4 py-2 rounded-md shadow-sm flex items-center justify-center gap-2 transition-all duration-300 hover:bg-primary-dark"
+            >
+              <DownloadIcon className="w-4 h-4" />
+              <span className="text-sm font-bold">{resource.isComingSoon ? 'Notify Me' : 'Download Now'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EmbedResourcePage;

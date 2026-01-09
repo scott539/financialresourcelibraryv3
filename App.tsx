@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -8,12 +8,12 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
+import EmbedResourcePage from './pages/EmbedResourcePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
-import { checkUrlForEmail } from './utils/emailGate';
 
 const AppContent: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -22,10 +22,10 @@ const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const location = useLocation();
 
-  useEffect(() => {
-    // checkUrlForEmail(); // Email gate is currently disabled.
-  }, []);
+  // Check if we are in "headless" mode for embedding
+  const isEmbedMode = location.pathname.startsWith('/embed/');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -140,12 +140,13 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />
+    <div className={`flex flex-col min-h-screen ${isEmbedMode ? 'bg-transparent' : 'bg-background-light'}`}>
+      {!isEmbedMode && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />}
 
-      <main className="flex-grow pb-16 md:pb-0">
+      <main className={`flex-grow ${!isEmbedMode ? 'pb-16 md:pb-0' : ''}`}>
         <Routes>
           <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
+          <Route path="/embed/:id" element={<EmbedResourcePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route 
@@ -166,8 +167,9 @@ const AppContent: React.FC = () => {
           />
         </Routes>
       </main>
-      <Footer isAuthenticated={isAuthenticated} />
-      <BottomNav isAuthenticated={isAuthenticated} onLogout={handleLogout} />
+      
+      {!isEmbedMode && <Footer isAuthenticated={isAuthenticated} />}
+      {!isEmbedMode && <BottomNav isAuthenticated={isAuthenticated} onLogout={handleLogout} />}
     </div>
   );
 };

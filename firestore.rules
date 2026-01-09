@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Resources Collection
+    match /resources/{resource} {
+      // Anyone can view resources
+      allow read: if true;
+      
+      // Only admins can create or delete resources
+      allow create, delete: if request.auth != null;
+      
+      // Allow admins to update anything.
+      // Allow public users ONLY to increment the 'downloadCount' field (needed for the download button).
+      allow update: if request.auth != null || 
+                   (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadCount']));
+    }
+
+    // Leads Collection
+    match /leads/{lead} {
+      // Allow public users to create new leads (Sign up form)
+      allow create: if true;
+      
+      // Only admins can read or modify lead data
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}

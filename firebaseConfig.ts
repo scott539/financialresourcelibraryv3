@@ -19,7 +19,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDFSAWofsCaT-EhU42yQn72Zkgv67X6bHA",
   authDomain: "bp-money-resources.firebaseapp.com",
   projectId: "bp-money-resources",
-  storageBucket: "bp-money-resources.firebasestorage.app",
+  storageBucket: "bp-money-resources.appspot.com",
   messagingSenderId: "272224588349",
   appId: "1:272224588349:web:6e7afaa4102ce1de679054",
   measurementId: "G-KHYCEEZ2XP"
