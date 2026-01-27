@@ -9,7 +9,6 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  writeBatch,
   runTransaction,
 } from 'firebase/firestore';
 import {
@@ -28,7 +27,7 @@ import {
 
 // --- Helper Functions ---
 
-const dataURItoBlob = (dataURI: string) => {
+const dataURItoBlob = (dataURI: string): Blob => {
     try {
         const splitData = dataURI.split(',');
         const byteString = atob(splitData[1]);
@@ -40,151 +39,143 @@ const dataURItoBlob = (dataURI: string) => {
         }
         return new Blob([ab], { type: mimeString });
     } catch (e) {
-        console.error("Error converting data URI to blob:", e);
-        throw new Error("Invalid image data.");
+        console.error("[API] Error converting data URI to blob:", e);
+        throw new Error("Invalid file format selected.");
     }
 }
 
 // --- Resources API ---
 
 export const getResources = async (): Promise<Resource[]> => {
-  const resourcesCol = collection(db, 'resources');
-  const resourceSnapshot = await getDocs(resourcesCol);
-  const resourceList = resourceSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Resource));
-  return resourceList;
+  try {
+    const resourcesCol = collection(db, 'resources');
+    const resourceSnapshot = await getDocs(resourcesCol);
+    return resourceSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Resource));
+  } catch (err) {
+    console.error("[API] Failed to fetch resources:", err);
+    return [];
+  }
 };
 
 const uploadFile = async (file: File | Blob | string, path: string, fileName: string): Promise<string> => {
-    console.log(`[API] Starting upload for ${fileName} to ${path}`);
-    const storageRef = ref(storage, path);
     const bucketName = storage.app.options.storageBucket;
+    console.log(`[API] Attempting upload to bucket: ${bucketName} at path: ${path}`);
+    
+    const storageRef = ref(storage, path);
     const metadata = {
-        contentDisposition: `attachment; filename="${fileName}"`,
+        contentType: (file instanceof File || file instanceof Blob) ? file.type : undefined,
     };
     
     try {
         const uploadTask = async () => {
             if (file instanceof File || file instanceof Blob) {
-                console.log(`[API] Uploading as bytes (File/Blob)... size: ${(file as any).size}`);
                 await uploadBytes(storageRef, file, metadata);
             } else {
-                console.log('[API] Uploading as base64 string...');
                 await uploadString(storageRef, file, 'data_url', metadata);
             }
-            console.log(`[API] Upload successful for ${fileName}, getting download URL...`);
             return await getDownloadURL(storageRef);
         };
 
+        // We use a robust timeout to catch CORS / Network hangs
         const timeoutTask = new Promise<string>((_, reject) => {
             setTimeout(() => {
-                reject(new Error(`Upload timed out for bucket: ${bucketName}. This is almost certainly caused by missing CORS configuration. Please go to the Admin -> Integrations tab for the fix.`));
-            }, 30000); // 30 second timeout
+                reject(new Error(`Upload timed out. This is usually a CORS issue or a browser cache conflict. Please Hard Refresh (Ctrl+F5) and try again.`));
+            }, 45000); 
         });
 
         return await Promise.race([uploadTask(), timeoutTask]);
     } catch (error: any) {
-        console.error(`[API] Upload failed for ${fileName}:`, error);
+        console.error(`[API] Upload error details:`, error);
+        if (error.code === 'storage/unauthorized') {
+            throw new Error("Permission denied. Ensure you are logged in as an admin.");
+        }
         throw error;
     }
 };
 
 
 export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>, fileToUpload?: File): Promise<Resource> => {
-  console.log('[API] addResource called');
   let imageUrl = resourceData.imageUrl;
   
-  if (imageUrl.startsWith('data:')) {
-    const imagePath = `thumbnails/${new Date().getTime()}_${resourceData.title.replace(/\s+/g, '_')}`;
-    const tempImageName = `thumbnail_${Date.now()}`;
+  if (imageUrl && imageUrl.startsWith('data:')) {
+    const imagePath = `thumbnails/${Date.now()}_thumb`;
     const imageBlob = dataURItoBlob(imageUrl);
-    imageUrl = await uploadFile(imageBlob, imagePath, tempImageName);
+    imageUrl = await uploadFile(imageBlob, imagePath, 'thumbnail.png');
   }
 
   let fileUrl = resourceData.fileUrl || '';
+  let fileName = resourceData.fileName || '';
   
   if (fileToUpload) {
-     const uniqueFolderName = new Date().getTime();
-     const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
-     fileUrl = await uploadFile(fileToUpload, filePath, resourceData.fileName);
-  } else if (fileUrl && fileUrl.startsWith('data:')) {
-     const uniqueFolderName = new Date().getTime();
-     const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
-     const fileBlob = dataURItoBlob(fileUrl);
-     fileUrl = await uploadFile(fileBlob, filePath, resourceData.fileName);
+     const filePath = `files/${Date.now()}/${fileToUpload.name}`;
+     fileUrl = await uploadFile(fileToUpload, filePath, fileToUpload.name);
+     fileName = fileToUpload.name;
   }
 
-  let liveDateForDb = null;
-  if (resourceData.liveDate) {
-    liveDateForDb = new Date(resourceData.liveDate);
-  }
+  const liveDateForDb = resourceData.liveDate ? new Date(resourceData.liveDate) : null;
 
   const docRef = await addDoc(collection(db, 'resources'), {
     ...resourceData,
     imageUrl,
     fileUrl,
+    fileName,
     liveDate: liveDateForDb,
     downloadCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   
-  return { ...resourceData, id: docRef.id, downloadCount: 0 };
+  return { ...resourceData, id: docRef.id, downloadCount: 0, fileUrl, fileName };
 };
 
 export const updateResource = async (updatedResource: Resource, fileToUpload?: File): Promise<Resource> => {
     const resourceRef = doc(db, 'resources', updatedResource.id);
     const dataToUpdate: any = { ...updatedResource, updatedAt: serverTimestamp() };
 
-    if (updatedResource.imageUrl.startsWith('data:')) {
-        const imagePath = `thumbnails/${new Date().getTime()}_${updatedResource.title.replace(/\s+/g, '_')}`;
-        const tempImageName = `thumbnail_${Date.now()}`;
+    if (updatedResource.imageUrl && updatedResource.imageUrl.startsWith('data:')) {
+        const imagePath = `thumbnails/${Date.now()}_thumb`;
         const imageBlob = dataURItoBlob(updatedResource.imageUrl);
-        dataToUpdate.imageUrl = await uploadFile(imageBlob, imagePath, tempImageName);
+        dataToUpdate.imageUrl = await uploadFile(imageBlob, imagePath, 'thumbnail.png');
     }
 
     if (fileToUpload) {
-        const uniqueFolderName = new Date().getTime();
-        const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
-        dataToUpdate.fileUrl = await uploadFile(fileToUpload, filePath, updatedResource.fileName);
-    } else if (updatedResource.fileUrl && updatedResource.fileUrl.startsWith('data:')) {
-        const uniqueFolderName = new Date().getTime();
-        const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
-        const fileBlob = dataURItoBlob(updatedResource.fileUrl);
-        dataToUpdate.fileUrl = await uploadFile(fileBlob, filePath, updatedResource.fileName);
+        const filePath = `files/${Date.now()}/${fileToUpload.name}`;
+        dataToUpdate.fileUrl = await uploadFile(fileToUpload, filePath, fileToUpload.name);
+        dataToUpdate.fileName = fileToUpload.name;
     }
 
-    if (typeof dataToUpdate.liveDate === 'string') {
-        dataToUpdate.liveDate = dataToUpdate.liveDate ? new Date(dataToUpdate.liveDate) : null;
-    }
+    dataToUpdate.liveDate = dataToUpdate.liveDate ? new Date(dataToUpdate.liveDate) : null;
     
-    delete dataToUpdate.id;
-    await updateDoc(resourceRef, dataToUpdate);
+    const { id, ...saveData } = dataToUpdate;
+    await updateDoc(resourceRef, saveData);
     return updatedResource;
 };
 
 
 export const deleteResource = async (id: string, resource: Resource): Promise<void> => {
-    const resourceRef = doc(db, 'resources', id);
-    await deleteDoc(resourceRef);
+    await deleteDoc(doc(db, 'resources', id));
 
     try {
-        if (resource.imageUrl && !resource.imageUrl.startsWith('data:')) {
-            const imageRef = ref(storage, resource.imageUrl);
-            await deleteObject(imageRef);
+        if (resource.imageUrl?.includes('firebasestorage')) {
+            await deleteObject(ref(storage, resource.imageUrl));
         }
-        if (resource.fileUrl && !resource.fileUrl.startsWith('data:')) {
-            const fileRef = ref(storage, resource.fileUrl);
-            await deleteObject(fileRef);
+        if (resource.fileUrl?.includes('firebasestorage')) {
+            await deleteObject(ref(storage, resource.fileUrl));
         }
-    } catch(error) {
-        console.error("Error deleting storage files:", error);
+    } catch(err) {
+        console.warn("[API] Storage cleanup skipped (file might not exist):", err);
     }
 };
 
 export const getLeads = async (): Promise<Lead[]> => {
-    const leadsCol = collection(db, 'leads');
-    const leadSnapshot = await getDocs(leadsCol);
-    return leadSnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Lead));
+    try {
+        const leadsCol = collection(db, 'leads');
+        const leadSnapshot = await getDocs(leadsCol);
+        return leadSnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Lead));
+    } catch (err) {
+        console.error("[API] Failed to fetch leads:", err);
+        return [];
+    }
 }
 
 export const addLead = async (resourceId: string, resourceTitle: string, leadData: { firstName: string; email: string; hasConsented: boolean; }): Promise<Lead> => {
@@ -202,11 +193,11 @@ export const addLead = async (resourceId: string, resourceTitle: string, leadDat
         await runTransaction(db, async (transaction) => {
             const resourceDoc = await transaction.get(resourceRef);
             if (!resourceDoc.exists()) return;
-            const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
-            transaction.update(resourceRef, { downloadCount: newDownloadCount });
+            const newCount = (resourceDoc.data().downloadCount || 0) + 1;
+            transaction.update(resourceRef, { downloadCount: newCount });
         });
     } catch (error) {
-        console.error("Failed to update download count:", error);
+        console.error("Failed to increment counter:", error);
     }
 
     return { ...newLead, id: docRef.id };
@@ -218,11 +209,11 @@ export const incrementResourceAccessCount = async (resourceId: string): Promise<
         await runTransaction(db, async (transaction) => {
             const resourceDoc = await transaction.get(resourceRef);
             if (!resourceDoc.exists()) return;
-            const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
-            transaction.update(resourceRef, { downloadCount: newDownloadCount });
+            const newCount = (resourceDoc.data().downloadCount || 0) + 1;
+            transaction.update(resourceRef, { downloadCount: newCount });
         });
     } catch (error) {
-        console.error("Failed to update download count:", error);
+        console.error("Failed to increment access count:", error);
     }
 };
 
@@ -231,7 +222,6 @@ export const login = async (email: string, pass: string): Promise<boolean> => {
         await signInWithEmailAndPassword(auth, email, pass);
         return true;
     } catch (error) {
-        console.error("Login failed:", error);
         return false;
     }
 };
@@ -250,7 +240,6 @@ export const updateCredentials = async (currentPass: string, newEmail: string, n
         await updatePassword(user, newPass);
         return true;
     } catch (error) {
-        console.error("Failed to update credentials:", error);
         return false;
     }
 };
