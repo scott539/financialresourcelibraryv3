@@ -389,7 +389,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Delete this resource?')) {
-        await deleteResource(id, resources.find(r => r.id === id)!);
+        await deleteResource(id);
     }
   }
 
@@ -617,8 +617,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-slate mb-4">Fix Storage Upload Errors (CORS)</h2>
                 <div className="space-y-4">
+                    <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
+                        <p className="text-sm text-green-700 font-bold">
+                           ✓ CORS Configuration is complete. You can now upload files from your Vercel website to Firebase Storage.
+                        </p>
+                    </div>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                        If you are seeing "Upload timed out" errors, it means your Firebase Storage bucket is blocking requests from this website. You must configure <strong>CORS</strong> (Cross-Origin Resource Sharing) in your Google Cloud Console.
+                        The instructions below are kept for your records. If you ever change your domain or run into upload errors again, you may need to re-run these commands.
                     </p>
                     
                     <div className="bg-amber-50 border-l-4 border-amber-400 p-4">
