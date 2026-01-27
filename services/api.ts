@@ -1,5 +1,4 @@
 
-
 import { Lead, Resource } from '../types';
 import { auth, db, storage } from '../firebaseConfig';
 import {
@@ -58,12 +57,12 @@ export const getResources = async (): Promise<Resource[]> => {
 const uploadFile = async (file: File | Blob | string, path: string, fileName: string): Promise<string> => {
     console.log(`[API] Starting upload for ${fileName} to ${path}`);
     const storageRef = ref(storage, path);
+    const bucketName = storage.app.options.storageBucket;
     const metadata = {
         contentDisposition: `attachment; filename="${fileName}"`,
     };
     
     try {
-        // Wrap the upload process in a Promise.race to handle timeouts (often due to CORS)
         const uploadTask = async () => {
             if (file instanceof File || file instanceof Blob) {
                 console.log(`[API] Uploading as bytes (File/Blob)... size: ${(file as any).size}`);
@@ -78,15 +77,12 @@ const uploadFile = async (file: File | Blob | string, path: string, fileName: st
 
         const timeoutTask = new Promise<string>((_, reject) => {
             setTimeout(() => {
-                reject(new Error("Upload timed out. This is usually caused by a missing CORS configuration in Firebase Storage. Please check the 'Integrations' tab in the Admin Dashboard or your Cloud Console."));
+                reject(new Error(`Upload timed out for bucket: ${bucketName}. This is almost certainly caused by missing CORS configuration. Please go to the Admin -> Integrations tab for the fix.`));
             }, 30000); // 30 second timeout
         });
 
-        const url = await Promise.race([uploadTask(), timeoutTask]);
-        
-        console.log(`[API] Got download URL for ${fileName}`);
-        return url;
-    } catch (error) {
+        return await Promise.race([uploadTask(), timeoutTask]);
+    } catch (error: any) {
         console.error(`[API] Upload failed for ${fileName}:`, error);
         throw error;
     }
@@ -100,20 +96,17 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
   if (imageUrl.startsWith('data:')) {
     const imagePath = `thumbnails/${new Date().getTime()}_${resourceData.title.replace(/\s+/g, '_')}`;
     const tempImageName = `thumbnail_${Date.now()}`;
-    // Convert to Blob for stability
     const imageBlob = dataURItoBlob(imageUrl);
     imageUrl = await uploadFile(imageBlob, imagePath, tempImageName);
   }
 
   let fileUrl = resourceData.fileUrl || '';
   
-  // Priority: Upload raw file if provided
   if (fileToUpload) {
      const uniqueFolderName = new Date().getTime();
      const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
      fileUrl = await uploadFile(fileToUpload, filePath, resourceData.fileName);
   } else if (fileUrl && fileUrl.startsWith('data:')) {
-     // Fallback for base64 strings, convert to blob
      const uniqueFolderName = new Date().getTime();
      const filePath = `files/${uniqueFolderName}/${resourceData.fileName}`;
      const fileBlob = dataURItoBlob(fileUrl);
@@ -125,7 +118,6 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
     liveDateForDb = new Date(resourceData.liveDate);
   }
 
-  console.log('[API] Adding document to Firestore...');
   const docRef = await addDoc(collection(db, 'resources'), {
     ...resourceData,
     imageUrl,
@@ -135,17 +127,14 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  console.log('[API] Document added with ID:', docRef.id);
   
   return { ...resourceData, id: docRef.id, downloadCount: 0 };
 };
 
 export const updateResource = async (updatedResource: Resource, fileToUpload?: File): Promise<Resource> => {
-    console.log('[API] updateResource called for:', updatedResource.id);
     const resourceRef = doc(db, 'resources', updatedResource.id);
     const dataToUpdate: any = { ...updatedResource, updatedAt: serverTimestamp() };
 
-    // Handle image upload if it's a new data URL
     if (updatedResource.imageUrl.startsWith('data:')) {
         const imagePath = `thumbnails/${new Date().getTime()}_${updatedResource.title.replace(/\s+/g, '_')}`;
         const tempImageName = `thumbnail_${Date.now()}`;
@@ -153,7 +142,6 @@ export const updateResource = async (updatedResource: Resource, fileToUpload?: F
         dataToUpdate.imageUrl = await uploadFile(imageBlob, imagePath, tempImageName);
     }
 
-    // Handle file upload
     if (fileToUpload) {
         const uniqueFolderName = new Date().getTime();
         const filePath = `files/${uniqueFolderName}/${updatedResource.fileName}`;
@@ -165,15 +153,12 @@ export const updateResource = async (updatedResource: Resource, fileToUpload?: F
         dataToUpdate.fileUrl = await uploadFile(fileBlob, filePath, updatedResource.fileName);
     }
 
-    // Convert string to Date or set to null, only if it's a string from the form
     if (typeof dataToUpdate.liveDate === 'string') {
         dataToUpdate.liveDate = dataToUpdate.liveDate ? new Date(dataToUpdate.liveDate) : null;
     }
     
-    delete dataToUpdate.id; // Ensure we don't try to write the document ID into the document data
-    console.log('[API] Updating Firestore document...');
+    delete dataToUpdate.id;
     await updateDoc(resourceRef, dataToUpdate);
-    console.log('[API] Update complete.');
     return updatedResource;
 };
 
@@ -182,7 +167,6 @@ export const deleteResource = async (id: string, resource: Resource): Promise<vo
     const resourceRef = doc(db, 'resources', id);
     await deleteDoc(resourceRef);
 
-    // Also delete associated files from storage
     try {
         if (resource.imageUrl && !resource.imageUrl.startsWith('data:')) {
             const imageRef = ref(storage, resource.imageUrl);
@@ -193,17 +177,14 @@ export const deleteResource = async (id: string, resource: Resource): Promise<vo
             await deleteObject(fileRef);
         }
     } catch(error) {
-        console.error("Error deleting storage files, they may not exist or have been deleted already:", error);
+        console.error("Error deleting storage files:", error);
     }
 };
-
-// --- Leads API ---
 
 export const getLeads = async (): Promise<Lead[]> => {
     const leadsCol = collection(db, 'leads');
     const leadSnapshot = await getDocs(leadsCol);
-    const leadList = leadSnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Lead));
-    return leadList;
+    return leadSnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Lead));
 }
 
 export const addLead = async (resourceId: string, resourceTitle: string, leadData: { firstName: string; email: string; hasConsented: boolean; }): Promise<Lead> => {
@@ -214,25 +195,17 @@ export const addLead = async (resourceId: string, resourceTitle: string, leadDat
         timestamp: new Date().toISOString()
     };
 
-    // Step 1: Securely add the lead. This is the primary operation.
     const docRef = await addDoc(collection(db, 'leads'), newLead);
 
-    // Step 2: Increment the download count.
-    // With the updated security rules, this transaction should succeed for all users.
     try {
         const resourceRef = doc(db, 'resources', resourceId);
         await runTransaction(db, async (transaction) => {
             const resourceDoc = await transaction.get(resourceRef);
-            if (!resourceDoc.exists()) {
-                console.error("Resource not found for download count update.");
-                return;
-            }
+            if (!resourceDoc.exists()) return;
             const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
             transaction.update(resourceRef, { downloadCount: newDownloadCount });
         });
     } catch (error) {
-        // This could fail due to network issues or if the transaction is contended.
-        // We log it for debugging but don't block the user experience.
         console.error("Failed to update download count:", error);
     }
 
@@ -244,22 +217,14 @@ export const incrementResourceAccessCount = async (resourceId: string): Promise<
         const resourceRef = doc(db, 'resources', resourceId);
         await runTransaction(db, async (transaction) => {
             const resourceDoc = await transaction.get(resourceRef);
-            if (!resourceDoc.exists()) {
-                console.error("Resource not found for download count update.");
-                return;
-            }
+            if (!resourceDoc.exists()) return;
             const newDownloadCount = (resourceDoc.data().downloadCount || 0) + 1;
             transaction.update(resourceRef, { downloadCount: newDownloadCount });
         });
     } catch (error) {
-        // This could fail due to network issues or if the transaction is contended.
-        // We log it for debugging but don't block the user from opening the link.
-        console.error("Failed to update download count for Google Drive access:", error);
+        console.error("Failed to update download count:", error);
     }
 };
-
-
-// --- Auth API ---
 
 export const login = async (email: string, pass: string): Promise<boolean> => {
     try {
@@ -282,15 +247,7 @@ export const updateCredentials = async (currentPass: string, newEmail: string, n
     try {
         const credential = EmailAuthProvider.credential(user.email, currentPass);
         await reauthenticateWithCredential(user, credential);
-        
-        // Once reauthenticated, update password.
-        // Updating email requires more complex logic (e.g., verification) and is omitted for simplicity.
-        // The username is stored in Firestore, this function will only handle password for now.
         await updatePassword(user, newPass);
-        
-        // You would typically use a Cloud Function to update the username in the `users` collection.
-        // For now, we are focusing on the client-side password update.
-        console.log("Password updated successfully.");
         return true;
     } catch (error) {
         console.error("Failed to update credentials:", error);

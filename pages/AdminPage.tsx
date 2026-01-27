@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag, ALL_TAGS, Lead } from '../types';
 import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon, ClockIcon, CopyIcon } from '../components/icons';
 import { UNIFIED_IMAGE_DATA } from '../data/imageData';
+import { storage } from '../firebaseConfig';
 
 type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
 
@@ -407,14 +408,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     setShowForm(true);
   }
 
-  // Improved robust copy mechanism
   const handleCopyId = (id: string) => {
     const performCopy = () => {
-      // 1. Try modern Clipboard API
       if (navigator.clipboard && window.isSecureContext) {
         return navigator.clipboard.writeText(id);
       } else {
-        // 2. Fallback to execCommand('copy') with a temporary textarea
         const textArea = document.createElement("textarea");
         textArea.value = id;
         textArea.style.position = "fixed";
@@ -441,8 +439,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
       })
       .catch((err) => {
         console.error('Copy failed:', err);
-        // Manual fallback alert for extreme cases
-        alert(`Copy failed. Please copy this ID manually: ${id}`);
+        alert(`Copy failed. Please copy this manually: ${id}`);
       });
   };
   
@@ -482,6 +479,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
       {label}
     </button>
   );
+
+  const bucketName = storage.app.options.storageBucket || 'YOUR_BUCKET_NAME';
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
@@ -549,7 +548,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                     <h4 className="font-bold text-slate leading-tight mb-1 truncate" title={resource.title}>{resource.title}</h4>
                                     <p className="text-[10px] uppercase font-bold text-gray-400 mb-4 tracking-wider">{resource.category}</p>
                                     
-                                    {/* SELECTABLE EMBED ID BLOCK */}
                                     <div className="mb-5">
                                       <div className="flex items-center justify-between mb-1">
                                           <span className="text-[10px] uppercase font-black text-slate/40 tracking-widest">Embed ID</span>
@@ -615,16 +613,64 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
             </div>
         )}
         {activeTab === 'integrations' && (
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-4xl">
-            <h2 className="text-2xl font-bold text-slate mb-6">External Integrations</h2>
-            <div className="space-y-6">
-                <div className="p-6 bg-blue-50/50 rounded-xl border border-blue-100">
-                    <h3 className="text-lg font-bold text-primary mb-3">ConvertKit Flow</h3>
-                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                        Leads are currently captured in your Firebase database. To automate emails, you can export the CSV on each card or connect your ConvertKit API key directly in <code>services/api.ts</code>.
+          <div className="container mx-auto max-w-4xl space-y-8">
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h2 className="text-2xl font-bold text-slate mb-4">Fix Storage Upload Errors (CORS)</h2>
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                        If you are seeing "Upload timed out" errors, it means your Firebase Storage bucket is blocking requests from this website. You must configure <strong>CORS</strong> (Cross-Origin Resource Sharing) in your Google Cloud Console.
                     </p>
-                    <div className="bg-slate rounded-xl p-5 shadow-inner">
-                        <pre className="text-[11px] text-blue-100 font-mono leading-relaxed"><code>{`// Sync lead with ConvertKit API
+                    
+                    <div className="bg-amber-50 border-l-4 border-amber-400 p-4">
+                        <h4 className="text-sm font-bold text-amber-800 mb-1">Step 1: Create a file named <code>cors.json</code></h4>
+                        <div className="relative group mt-2">
+                             <button 
+                                onClick={() => handleCopyId(`[\n  {\n    "origin": ["*"],\n    "method": ["GET", "PUT", "POST", "DELETE", "HEAD"],\n    "responseHeader": ["Content-Type", "x-goog-resumable"],\n    "maxAgeSeconds": 3600\n  }\n]`)}
+                                className="absolute top-2 right-2 p-1.5 bg-slate/10 hover:bg-slate/20 rounded text-slate transition-all"
+                            >
+                                <CopyIcon className="w-4 h-4" />
+                            </button>
+                            <pre className="text-[11px] bg-slate/5 p-3 rounded-lg overflow-x-auto font-mono text-slate/80">
+{`[
+  {
+    "origin": ["*"],
+    "method": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+    "responseHeader": ["Content-Type", "x-goog-resumable"],
+    "maxAgeSeconds": 3600
+  }
+]`}
+                            </pre>
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <h4 className="text-sm font-bold text-blue-800 mb-1">Step 2: Run the command in your terminal</h4>
+                        <p className="text-xs text-blue-700 mb-2">You must have <code>gcloud</code> / <code>gsutil</code> installed, or use the <strong>Cloud Shell</strong> in your Google Cloud Console.</p>
+                        <div className="relative group">
+                            <button 
+                                onClick={() => handleCopyId(`gsutil cors set cors.json gs://${bucketName}`)}
+                                className="absolute top-2 right-2 p-1.5 bg-blue-600/10 hover:bg-blue-600/20 rounded text-blue-600 transition-all"
+                            >
+                                <CopyIcon className="w-4 h-4" />
+                            </button>
+                            <code className="text-[11px] bg-blue-600/5 p-3 rounded-lg block font-mono text-blue-800 break-all pr-10">
+                                gsutil cors set cors.json gs://{bucketName}
+                            </code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h2 className="text-2xl font-bold text-slate mb-6">Lead Automation</h2>
+                <div className="space-y-6">
+                    <div className="p-6 bg-blue-50/50 rounded-xl border border-blue-100">
+                        <h3 className="text-lg font-bold text-primary mb-3">ConvertKit API</h3>
+                        <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                            To sync leads automatically, paste your keys in <code>services/api.ts</code>.
+                        </p>
+                        <div className="bg-slate rounded-xl p-5 shadow-inner">
+                            <pre className="text-[11px] text-blue-100 font-mono leading-relaxed"><code>{`// Example integration
 export const addLead = async (leadData) => {
   const CK_FORM_ID = 'YOUR_FORM_ID';
   const CK_API_KEY = 'YOUR_API_KEY';
@@ -634,6 +680,7 @@ export const addLead = async (leadData) => {
     body: JSON.stringify({ api_key: CK_API_KEY, ...leadData })
   });
 };`}</code></pre>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -648,19 +695,15 @@ export const addLead = async (leadData) => {
                   <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">1</div>
                   <h3 className="text-lg font-bold text-slate">Full Library Embed</h3>
                 </div>
-                <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page. It will automatically resize to fit perfectly.</p>
+                <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page.</p>
                 <div className="ml-11 relative group bg-slate rounded-xl p-5">
                     <button 
                         onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="${window.location.origin}/embed.js"></script>`)}
                         className="absolute top-4 right-4 p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
-                        title="Copy Script"
                     >
                         <CopyIcon className="w-4 h-4" />
                     </button>
-                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>
-<script>
-  // Add library loader script here...
-</script>`}</code></pre>
+                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>\n<script src="${window.location.origin}/embed.js"></script>`}</code></pre>
                 </div>
               </section>
 
@@ -669,15 +712,11 @@ export const addLead = async (leadData) => {
                   <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">2</div>
                   <h3 className="text-lg font-bold text-slate">Single Resource Landing Page</h3>
                 </div>
-                <p className="text-sm text-gray-500 mb-6 ml-11">Embed just one specific card by copying its <strong>Embed ID</strong> from the Resources tab and using it in your landing page script.</p>
+                <p className="text-sm text-gray-500 mb-6 ml-11">Copy a specific <strong>Embed ID</strong> from the Resources tab and use this URL structure in your iframe:</p>
                 <div className="ml-11 p-5 bg-amber-50 rounded-xl border border-amber-200">
-                    <p className="text-sm font-bold text-amber-900 mb-1 flex items-center gap-2">
-                        <ClockIcon className="w-4 h-4" />
-                        Quick Start:
-                    </p>
-                    <p className="text-xs text-amber-800 italic">
-                        The single-resource view is "headless" (no headers/footers), designed to blend seamlessly into your existing WordPress layouts.
-                    </p>
+                    <code className="text-xs text-amber-900 font-bold break-all">
+                        {window.location.origin}/#/embed/[RESOURCE_ID]
+                    </code>
                 </div>
               </section>
             </div>
@@ -686,7 +725,7 @@ export const addLead = async (leadData) => {
         {activeTab === 'settings' && (
            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-xl mx-auto">
             <h2 className="text-2xl font-bold text-slate mb-2">Access Control</h2>
-            <p className="text-sm text-gray-400 mb-8">Change the credentials used to manage this library.</p>
+            <p className="text-sm text-gray-400 mb-8">Change your management credentials.</p>
             <form onSubmit={handleSettingsSubmit} className="space-y-6">
               <div>
                 <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">Admin Username</label>
@@ -705,7 +744,6 @@ export const addLead = async (leadData) => {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   className="block w-full border-gray-200 rounded-xl shadow-sm focus:ring-primary focus:border-primary text-sm p-3"
-                  placeholder="Verify your identity"
                   required
                 />
               </div>
