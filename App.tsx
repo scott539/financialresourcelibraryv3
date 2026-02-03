@@ -140,7 +140,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex flex-col min-h-screen ${isEmbedMode ? 'bg-transparent' : 'bg-background-light'}`}>
+    <div className={`flex flex-col ${isEmbedMode ? 'bg-transparent' : 'min-h-screen bg-background-light'}`}>
       {!isEmbedMode && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />}
 
       <main className={`flex-grow ${!isEmbedMode ? 'pb-16 md:pb-0' : ''}`}>
