@@ -54,6 +54,8 @@ export interface Resource {
   fileName: string;
   googleDriveUrl?: string;
   isHidden?: boolean;
+  isFeatured?: boolean;
+  featuredUntil?: string | null;
   createdAt?: any;
   updatedAt?: any;
   liveDate?: any;

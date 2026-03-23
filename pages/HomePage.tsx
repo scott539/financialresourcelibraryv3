@@ -48,7 +48,17 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
 
         return matchesSearch && matchesCategory && matchesTags;
       })
-      .sort((a, b) => b.downloadCount - a.downloadCount);
+      .sort((a, b) => {
+        const now = new Date();
+        const aFeatured = a.isFeatured && (!a.featuredUntil || new Date(a.featuredUntil) > now);
+        const bFeatured = b.isFeatured && (!b.featuredUntil || new Date(b.featuredUntil) > now);
+
+        if (aFeatured && !bFeatured) return -1;
+        if (!aFeatured && bFeatured) return 1;
+        
+        // If both are featured or both are not, sort by downloadCount
+        return (b.downloadCount || 0) - (a.downloadCount || 0);
+      });
   }, [resources, searchTerm, activeCategory, activeTags]);
 
   const handleTagToggle = (tag: Tag) => {

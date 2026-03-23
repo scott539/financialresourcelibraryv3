@@ -29,6 +29,7 @@ const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
   fileName: '',
   googleDriveUrl: '',
   isHidden: false,
+  isFeatured: false,
   liveDate: '',
 };
 
@@ -115,9 +116,10 @@ interface ResourceFormProps {
     onSubmit: (resource: Omit<Resource, 'id' | 'downloadCount'> | Resource, file?: File) => Promise<void>;
     initialData: Omit<Resource, 'id' | 'downloadCount'> | Resource | null;
     onCancel: () => void;
+    resources: Resource[];
 }
 
-const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCancel }) => {
+const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCancel, resources }) => {
     const [formData, setFormData] = useState(() => {
         const data = initialData || emptyResource;
         
@@ -171,9 +173,22 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
         setSubmitError('');
         
         try {
+            const featuredCount = resources.filter(r => 
+                r.isFeatured && 
+                (!r.featuredUntil || new Date(r.featuredUntil) > new Date()) &&
+                (isEditing ? r.id !== (initialData as Resource).id : true)
+            ).length;
+
+            if (formData.isFeatured && featuredCount >= 2) {
+                throw new Error("Only two resources can be featured at a time. Please un-feature another resource first.");
+            }
+
             const dataToSubmit = { 
                 ...formData, 
-                isComingSoon: isEffectivelyComingSoon 
+                isComingSoon: isEffectivelyComingSoon,
+                featuredUntil: formData.isFeatured 
+                    ? (formData.featuredUntil || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()) 
+                    : null
             };
             await onSubmit(dataToSubmit, resourceFile || undefined);
         } catch (error: any) {
@@ -303,6 +318,19 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                                 className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                             />
                             <span className="font-medium text-gray-700">Hide from public view</span>
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer p-2 border rounded-md hover:bg-gray-50">
+                            <input
+                                type="checkbox"
+                                name="isFeatured"
+                                checked={!!formData.isFeatured}
+                                onChange={handleChange}
+                                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex flex-col">
+                                <span className="font-medium text-gray-700">Feature this resource</span>
+                                <span className="text-[10px] text-gray-500 italic">Appears at the top of the library for 7 days. Max 2 featured.</span>
+                            </div>
                         </label>
                     </div>
                 </div>
@@ -510,6 +538,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                         onSubmit={handleFormSubmit} 
                         initialData={editingResource}
                         onCancel={handleCancelForm}
+                        resources={resources}
                     />
                  )}
 
@@ -536,11 +565,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                     )}
                                 </div>
                                 
-                                {resource.isHidden && (
-                                    <div className="absolute top-3 right-3 bg-slate text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded z-10 shadow-sm opacity-90">
-                                        Hidden
-                                    </div>
-                                )}
+                                     {resource.isHidden && (
+                                        <div className="absolute top-3 right-3 bg-slate text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded z-10 shadow-sm opacity-90">
+                                            Hidden
+                                        </div>
+                                    )}
+                                    
+                                    {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+                                        <div className="absolute top-3 right-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded z-10 shadow-sm">
+                                            Featured
+                                        </div>
+                                    )}
                                 
                                 <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-t-xl" />
                                 

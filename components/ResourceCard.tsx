@@ -61,11 +61,18 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onDownloadClick, 
       <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden h-full flex flex-col">
         <div className="relative">
           <img src={imageUrl} alt={title} className="w-full aspect-square object-cover" />
-          {isComingSoon && (
-            <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full z-10">
-              Coming Soon
-            </div>
-          )}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+              <div className="bg-primary text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                Featured
+              </div>
+            )}
+            {isComingSoon && (
+              <div className="bg-yellow-400 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full shadow-sm">
+                Coming Soon
+              </div>
+            )}
+          </div>
           <div className="absolute top-2 right-2 bg-primary/80 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full">
             {(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : 'Downloads'}
           </div>

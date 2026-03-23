@@ -43,11 +43,18 @@ const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDown
             alt={resource.title} 
             className="w-full aspect-square object-cover rounded-lg shadow-sm"
           />
-          {resource.isComingSoon && (
-            <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm z-10">
-              Coming Soon
-            </div>
-          )}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+              <div className="bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
+                Featured
+              </div>
+            )}
+            {resource.isComingSoon && (
+              <div className="bg-yellow-400 text-yellow-900 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
+                Coming Soon
+              </div>
+            )}
+          </div>
           <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg z-10">
             {(resource.downloadCount || 0).toLocaleString()} {resource.isComingSoon ? 'SIGNUPS' : 'DOWNLOADS'}
           </div>
