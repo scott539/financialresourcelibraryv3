@@ -106,7 +106,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
         <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-slate tracking-tight">Financial Resource Library</h1>
             <p className="mt-2 max-w-2xl mx-auto text-lg text-gray-500">
-              Your one-stop toolkit for financial planning and success.
+              A Repository of Free Resources for the Financial Independence Community.
             </p>
         </div>
         
