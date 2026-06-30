@@ -738,12 +738,23 @@ export const addLead = async (leadData) => {
                 <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page.</p>
                 <div className="ml-11 relative group bg-slate rounded-xl p-5">
                     <button 
-                        onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="https://financialresourcelibraryv3.vercel.app/embed.js"></script>`)}
+                        onClick={() => handleCopyId(`<iframe id="bp-money-iframe" src="https://financialresourcelibraryv3.vercel.app/" width="100%" height="800px" style="border:none; overflow:hidden;" scrolling="no" title="Financial Resource Library"></iframe>\n<script>\n  window.addEventListener('message', function(event) {\n    if (event.data && event.data.type === 'financial-library-resize' && event.data.height) {\n      var iframe = document.getElementById('bp-money-iframe');\n      if (iframe) iframe.style.height = (parseInt(event.data.height, 10) + 10) + 'px';\n    }\n  });\n</script>`)}
                         className="absolute top-4 right-4 p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
                     >
                         <CopyIcon className="w-4 h-4" />
                     </button>
-                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>\n<script src="https://financialresourcelibraryv3.vercel.app/embed.js"></script>`}</code></pre>
+                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto whitespace-pre-wrap"><code>{`<iframe id="bp-money-iframe" title="Financial Resource Library"
+  src="https://financialresourcelibraryv3.vercel.app/" 
+  width="100%" height="800px" style="border:none; overflow:hidden;" scrolling="no">
+</iframe>
+<script>
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'financial-library-resize' && event.data.height) {
+      var iframe = document.getElementById('bp-money-iframe');
+      if (iframe) iframe.style.height = (parseInt(event.data.height, 10) + 10) + 'px';
+    }
+  });
+</script>`}</code></pre>
                 </div>
               </section>
 
@@ -752,7 +763,7 @@ export const addLead = async (leadData) => {
                   <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">2</div>
                   <h3 className="text-lg font-bold text-slate">Single Resource Landing Page</h3>
                 </div>
-                <p className="text-sm text-gray-500 mb-6 ml-11">Copy a specific <strong>Embed ID</strong> from the Resources tab and use this URL structure in your iframe:</p>
+                <p className="text-sm text-gray-500 mb-6 ml-11">To embed a single resource, use the same code above but change the <code>src</code> URL to:</p>
                 <div className="ml-11 p-5 bg-amber-50 rounded-xl border border-amber-200">
                     <code className="text-xs text-amber-900 font-bold break-all">
                         https://financialresourcelibraryv3.vercel.app/#/embed/[RESOURCE_ID]
