@@ -25,7 +25,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
 
   // Check if we are in "headless" mode for embedding
-  const isEmbedMode = location.pathname.startsWith('/embed/');
+  const isEmbedMode = window.self !== window.top || location.pathname.startsWith('/embed/');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {

@@ -43,10 +43,13 @@
         
         // Handle resize message
         if (event.data.type === 'financial-library-resize' && event.data.height) {
-            // Add a small buffer to prevent scrollbars (e.g. 10px)
             var newHeight = parseInt(event.data.height, 10);
             if (newHeight > 0) {
-                iframe.style.height = (newHeight + 10) + 'px';
+                // Add a small buffer and only update if it actually changed
+                var targetHeight = (newHeight + 10) + 'px';
+                if (iframe.style.height !== targetHeight) {
+                    iframe.style.height = targetHeight;
+                }
             }
         }
     });
