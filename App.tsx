@@ -61,12 +61,12 @@ const AppContent: React.FC = () => {
     
     const postHeight = () => {
       rafId = requestAnimationFrame(() => {
-        const root = document.getElementById('root');
-        if (root) {
-          // Use offsetHeight of the root div to prevent infinite expanding loops
-          // that happen when measuring documentElement.scrollHeight
-          const height = root.offsetHeight;
-          if (height !== lastHeight) {
+        const wrapper = document.getElementById('bp-app-wrapper');
+        if (wrapper) {
+          // Use scrollHeight to get the true content height, 
+          // independent of the window/iframe expanding
+          const height = wrapper.scrollHeight;
+          if (Math.abs(height - lastHeight) > 2) {
             lastHeight = height;
             window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
           }
@@ -74,16 +74,14 @@ const AppContent: React.FC = () => {
       });
     };
 
-    const root = document.getElementById('root');
+    const wrapper = document.getElementById('bp-app-wrapper');
     const observer = new ResizeObserver(postHeight);
     
-    if (root) {
-      observer.observe(root);
+    if (wrapper) {
+      observer.observe(wrapper);
     }
     
-    // Also listen to document body changes as a fallback
-    observer.observe(document.body);
-    
+    // Also listen to window resize to catch layout shifts
     window.addEventListener('resize', postHeight);
     
     postHeight();
@@ -158,7 +156,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex flex-col ${isEmbedMode ? 'bg-transparent' : 'min-h-screen bg-background-light'}`}>
+    <div id="bp-app-wrapper" className={`flex flex-col ${isEmbedMode ? 'bg-transparent' : 'min-h-screen bg-background-light'}`}>
       {!isEmbedMode && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />}
 
       <main className={`flex-grow ${!isEmbedMode ? 'pb-16 md:pb-0' : ''}`}>
