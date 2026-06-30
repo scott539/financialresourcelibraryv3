@@ -738,12 +738,12 @@ export const addLead = async (leadData) => {
                 <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page.</p>
                 <div className="ml-11 relative group bg-slate rounded-xl p-5">
                     <button 
-                        onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="${window.location.origin}/embed.js"></script>`)}
+                        onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="https://financialresourcelibraryv3.vercel.app/embed.js"></script>`)}
                         className="absolute top-4 right-4 p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
                     >
                         <CopyIcon className="w-4 h-4" />
                     </button>
-                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>\n<script src="${window.location.origin}/embed.js"></script>`}</code></pre>
+                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>\n<script src="https://financialresourcelibraryv3.vercel.app/embed.js"></script>`}</code></pre>
                 </div>
               </section>
 
@@ -755,7 +755,7 @@ export const addLead = async (leadData) => {
                 <p className="text-sm text-gray-500 mb-6 ml-11">Copy a specific <strong>Embed ID</strong> from the Resources tab and use this URL structure in your iframe:</p>
                 <div className="ml-11 p-5 bg-amber-50 rounded-xl border border-amber-200">
                     <code className="text-xs text-amber-900 font-bold break-all">
-                        {window.location.origin}/#/embed/[RESOURCE_ID]
+                        https://financialresourcelibraryv3.vercel.app/#/embed/[RESOURCE_ID]
                     </code>
                 </div>
               </section>
