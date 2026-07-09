@@ -7,7 +7,7 @@ export const STATIC_RESOURCES: Resource[] = [
     description: 'A comprehensive personal budgeting and cash flow tracking template designed to analyze your spending and optimize your savings rate.',
     longDescription: 'A comprehensive personal budgeting and cash flow tracking template designed specifically for the FI/RE community to analyze your spending, optimize your savings rate, and forecast your journey to financial freedom.',
     category: MainCategory.TOOLKIT,
-    type: ResourceType.WEB_APP,
+    type: ResourceType.SPREADSHEET,
     tags: [Tag.CALCULATORS, Tag.GOAL_SETTING],
     googleDriveUrl: 'https://biggerpocketsmoney.com/budget/',
     fileUrl: 'https://biggerpocketsmoney.com/budget/',
@@ -17,7 +17,8 @@ export const STATIC_RESOURCES: Resource[] = [
     isComingSoon: false,
     isHidden: false,
     isOpenDirectly: true,
-    isFeatured: false
+    isFeatured: false,
+    actionLabel: 'Open Spreadsheet'
   },
   {
     id: 'bp-income-tax-projection',
@@ -25,7 +26,7 @@ export const STATIC_RESOURCES: Resource[] = [
     description: 'Project your annual income tax liability, calculate effective tax brackets, and optimize tax-loss harvesting or deductions.',
     longDescription: 'Plan ahead and prevent surprises. This Income Tax Projection Calculator helps you estimate your annual tax liability, understand your marginal vs. effective tax brackets, and evaluate options for pre-tax contributions.',
     category: MainCategory.TOOLKIT,
-    type: ResourceType.WEB_APP,
+    type: ResourceType.SPREADSHEET,
     tags: [Tag.CALCULATORS, Tag.PROJECTION_MODELS],
     googleDriveUrl: 'https://biggerpocketsmoney.com/income-tax-projection/',
     fileUrl: 'https://biggerpocketsmoney.com/income-tax-projection/',
@@ -34,7 +35,8 @@ export const STATIC_RESOURCES: Resource[] = [
     downloadCount: 899,
     isComingSoon: false,
     isHidden: false,
-    isOpenDirectly: true
+    isOpenDirectly: true,
+    actionLabel: 'Open Spreadsheet'
   },
   {
     id: 'bp-healthcare-costs-estimator',
@@ -42,7 +44,7 @@ export const STATIC_RESOURCES: Resource[] = [
     description: 'Estimate and plan for your post-retirement healthcare costs, insurance premiums, and HSA contribution strategies.',
     longDescription: 'One of the largest expenses in retirement is medical care. This Healthcare Costs Estimator helps you plan for future premiums, deductibles, out-of-pocket limits, and maximize tax-free growth with HSA strategies.',
     category: MainCategory.TOOLKIT,
-    type: ResourceType.WEB_APP,
+    type: ResourceType.SPREADSHEET,
     tags: [Tag.CALCULATORS, Tag.PROJECTION_MODELS],
     googleDriveUrl: 'https://biggerpocketsmoney.com/healthcarecosts/',
     fileUrl: 'https://biggerpocketsmoney.com/healthcarecosts/',
@@ -51,7 +53,8 @@ export const STATIC_RESOURCES: Resource[] = [
     downloadCount: 2509,
     isComingSoon: false,
     isHidden: false,
-    isOpenDirectly: true
+    isOpenDirectly: true,
+    actionLabel: 'Open Spreadsheet'
   },
   {
     id: 'bp-mortgage-payoff-calculator',
@@ -59,7 +62,7 @@ export const STATIC_RESOURCES: Resource[] = [
     description: 'Visualize how extra principal payments accelerate your home payoff date and track interest saved over the life of your loan.',
     longDescription: 'Compare the long-term impact of paying down your mortgage early versus investing the difference. Track amortization schedules, extra monthly or annual payments, and discover how many years you can shave off your loan.',
     category: MainCategory.TOOLKIT,
-    type: ResourceType.WEB_APP,
+    type: ResourceType.SPREADSHEET,
     tags: [Tag.CALCULATORS],
     googleDriveUrl: 'https://biggerpocketsmoney.com/mortgage-payoff-calculator/',
     fileUrl: 'https://biggerpocketsmoney.com/mortgage-payoff-calculator/',
@@ -68,7 +71,8 @@ export const STATIC_RESOURCES: Resource[] = [
     downloadCount: 558,
     isComingSoon: false,
     isHidden: false,
-    isOpenDirectly: true
+    isOpenDirectly: true,
+    actionLabel: 'Open Spreadsheet'
   },
   {
     id: 'bp-mega-backdoor-roth-guide',
@@ -86,7 +90,7 @@ export const STATIC_RESOURCES: Resource[] = [
     isComingSoon: false,
     isHidden: false,
     isOpenDirectly: true,
-    actionLabel: 'Open Workbook'
+    actionLabel: 'Read Strategy Guide'
   },
   {
     id: 'bp-personal-financial-statement',
@@ -94,7 +98,7 @@ export const STATIC_RESOURCES: Resource[] = [
     description: 'Track your true net worth, calculate liquid versus non-liquid assets, and optimize your wealth-building trajectory towards financial freedom.',
     longDescription: 'The Personal Financial Statement (PFS) is the bedrock of any serious wealth builder\'s journey. Tailored specifically for the FI/RE community, this comprehensive statement allows you to aggregate your cash, taxable brokerages, retirement funds (401k/IRA), real estate equities, and business valuations against any outstanding debts (mortgages, auto, student loans, or personal liabilities). It computes your debt-to-equity ratio, liquid net worth percentage, and projected progress towards your ultimate FI number, giving you a crystal-clear audit of your financial standing.',
     category: MainCategory.TOOLKIT,
-    type: ResourceType.WEB_APP,
+    type: ResourceType.SPREADSHEET,
     tags: [Tag.FINANCIAL_STATEMENTS, Tag.GOAL_SETTING],
     googleDriveUrl: 'https://biggerpocketsmoney.com/pfs/',
     fileUrl: 'https://biggerpocketsmoney.com/pfs/',
@@ -104,6 +108,6 @@ export const STATIC_RESOURCES: Resource[] = [
     isComingSoon: false,
     isHidden: false,
     isOpenDirectly: true,
-    actionLabel: 'Open Calculator'
+    actionLabel: 'Open Spreadsheet'
   }
 ];

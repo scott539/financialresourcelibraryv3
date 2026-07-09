@@ -389,9 +389,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
   const [settingsSuccess, setSettingsSuccess] = useState('');
   const [isUpdatingCreds, setIsUpdatingCreds] = useState(false);
 
+  // --- Embed builder state ---
+  const [embedResourceId, setEmbedResourceId] = useState<string>('');
+  const [embedLayout, setEmbedLayout] = useState<'wide' | 'compact'>('compact');
+
   useEffect(() => {
     setNewUsername(adminUsername);
   }, [adminUsername]);
+
+  // Default the embed builder to the first available resource once resources load.
+  useEffect(() => {
+    if (!embedResourceId && resources.length > 0) {
+      setEmbedResourceId(resources[0].id);
+    }
+  }, [resources, embedResourceId]);
 
   const handleSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -748,42 +759,136 @@ export const addLead = async (leadData) => {
             </div>
           </div>
         )}
-        {activeTab === 'embed' && (
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-4xl">
-            <h2 className="text-2xl font-bold text-slate mb-6">Embedding Instructions</h2>
-            <div className="space-y-10">
-              <section>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">1</div>
-                  <h3 className="text-lg font-bold text-slate">Full Library Embed</h3>
-                </div>
-                <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page.</p>
-                <div className="ml-11 relative group bg-slate rounded-xl p-5">
-                    <button 
-                        onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="${window.location.origin}/embed.js"></script>`)}
-                        className="absolute top-4 right-4 p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
-                    >
-                        <CopyIcon className="w-4 h-4" />
-                    </button>
-                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>\n<script src="${window.location.origin}/embed.js"></script>`}</code></pre>
-                </div>
-              </section>
+        {activeTab === 'embed' && (() => {
+          const origin = window.location.origin;
+          const scriptTag = `<script src="${origin}/embed.js"></script>`;
 
-              <section>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">2</div>
-                  <h3 className="text-lg font-bold text-slate">Single Resource Landing Page</h3>
-                </div>
-                <p className="text-sm text-gray-500 mb-6 ml-11">Copy a specific <strong>Embed ID</strong> from the Resources tab and use this URL structure in your iframe:</p>
-                <div className="ml-11 p-5 bg-amber-50 rounded-xl border border-amber-200">
-                    <code className="text-xs text-amber-900 font-bold break-all">
-                        {window.location.origin}/#/embed/[RESOURCE_ID]
-                    </code>
-                </div>
-              </section>
+          // Snippet for the currently-selected single resource + layout.
+          const singleSnippet =
+            `<!-- BiggerPockets Money resource module -->\n` +
+            `<div class="bp-money-embed" data-resource-id="${embedResourceId}" data-layout="${embedLayout}" style="width:100%"></div>\n` +
+            scriptTag;
+
+          // Full-library snippet.
+          const librarySnippet =
+            `<!-- BiggerPockets Money full library -->\n` +
+            `<div class="bp-money-embed" style="width:100%"></div>\n` +
+            scriptTag;
+
+          const previewUrl = `${origin}/#/embed/${embedResourceId}?layout=${embedLayout}`;
+
+          const CopyBlock: React.FC<{ code: string }> = ({ code }) => {
+            const isCopied = copiedId === code;
+            return (
+              <div className="relative group bg-slate rounded-xl p-5">
+                <button
+                  onClick={() => handleCopyId(code)}
+                  className={`absolute top-3 right-3 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${isCopied ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                >
+                  <CopyIcon className="w-4 h-4" />
+                  {isCopied ? 'Copied!' : 'Copy'}
+                </button>
+                <pre className="text-xs text-blue-100 font-mono overflow-x-auto whitespace-pre-wrap break-all pr-20"><code>{code}</code></pre>
+              </div>
+            );
+          };
+
+          return (
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-4xl">
+              <h2 className="text-2xl font-bold text-slate mb-2">Embed Builder</h2>
+              <p className="text-sm text-gray-500 mb-8">Pick a resource and a layout, then copy the HTML and paste it into any landing page. The module auto-sizes its container — no manual height needed.</p>
+
+              <div className="space-y-10">
+                {/* --- Single resource builder --- */}
+                <section>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">1</div>
+                    <h3 className="text-lg font-bold text-slate">Single Resource Module</h3>
+                  </div>
+
+                  <div className="ml-11 grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">Resource</label>
+                      <select
+                        value={embedResourceId}
+                        onChange={(e) => setEmbedResourceId(e.target.value)}
+                        className="block w-full border-gray-200 rounded-xl shadow-sm focus:ring-primary focus:border-primary text-sm p-3 bg-white"
+                      >
+                        {resources.length === 0 && <option value="">No resources available</option>}
+                        {resources.map(r => (
+                          <option key={r.id} value={r.id}>{r.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate/50 uppercase tracking-widest mb-2">Layout</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEmbedLayout('compact')}
+                          className={`px-3 py-3 rounded-xl text-xs font-bold border transition-all ${embedLayout === 'compact' ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-slate border-gray-200 hover:border-primary/40'}`}
+                        >
+                          Compact
+                          <span className="block text-[9px] font-medium opacity-70 mt-0.5">Tall / skinny</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEmbedLayout('wide')}
+                          className={`px-3 py-3 rounded-xl text-xs font-bold border transition-all ${embedLayout === 'wide' ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-slate border-gray-200 hover:border-primary/40'}`}
+                        >
+                          Wide
+                          <span className="block text-[9px] font-medium opacity-70 mt-0.5">Full width</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="ml-11">
+                    <CopyBlock code={singleSnippet} />
+                    {embedResourceId && (
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-primary hover:text-primary-dark"
+                      >
+                        <EyeIcon className="w-4 h-4" />
+                        Preview this module in a new tab
+                      </a>
+                    )}
+                  </div>
+                </section>
+
+                {/* --- Full library --- */}
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">2</div>
+                    <h3 className="text-lg font-bold text-slate">Full Library Grid</h3>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-4 ml-11">Embeds the entire browsable resource library (search, filters, and all cards).</p>
+                  <div className="ml-11">
+                    <CopyBlock code={librarySnippet} />
+                  </div>
+                </section>
+
+                {/* --- Reference / tips --- */}
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-center w-8 h-8 bg-slate/80 text-white font-black rounded-full">i</div>
+                    <h3 className="text-lg font-bold text-slate">How it works &amp; tips</h3>
+                  </div>
+                  <div className="ml-11 p-5 bg-slate-50 rounded-xl border border-gray-100 text-sm text-gray-600 space-y-2">
+                    <p><strong>Multiple modules per page:</strong> add as many <code className="bg-white px-1.5 py-0.5 rounded border text-xs">&lt;div class="bp-money-embed"&gt;</code> containers as you want. Include the <code className="bg-white px-1.5 py-0.5 rounded border text-xs">&lt;script&gt;</code> tag only once per page.</p>
+                    <p><strong>Layouts:</strong> <code className="bg-white px-1.5 py-0.5 rounded border text-xs">data-layout="wide"</code> is the big full-width module; <code className="bg-white px-1.5 py-0.5 rounded border text-xs">data-layout="compact"</code> is the tall/skinny card. If omitted, it defaults to compact.</p>
+                    <p><strong>Auto-sizing:</strong> the container grows or shrinks to fit the module automatically. You do not need to set a height.</p>
+                    <p><strong>Resource IDs</strong> are also shown on the Manage tab (copy icon) if you prefer to hand-write snippets.</p>
+                  </div>
+                </section>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {activeTab === 'settings' && (
            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-xl mx-auto">
             <h2 className="text-2xl font-bold text-slate mb-2">Access Control</h2>

@@ -65,7 +65,27 @@
         height: 100%;
         object-fit: cover;
       }
+
+      /* When loaded as an embed module (html.bp-embed set by the inline script below),
+         make the page background fully transparent so the module blends seamlessly into
+         whatever landing page it is embedded on. */
+      html.bp-embed,
+      html.bp-embed body {
+        background: transparent !important;
+      }
     </style>
+    <script>
+      // Detect embed routes as early as possible (before React mounts) and flag the <html>
+      // element so the transparent-background CSS above applies without a flash of white.
+      (function () {
+        try {
+          var h = window.location.hash || '';
+          if (h.indexOf('#/embed/') === 0 || h.indexOf('#/embed') === 0) {
+            document.documentElement.classList.add('bp-embed');
+          }
+        } catch (e) {}
+      })();
+    </script>
 <script type="importmap">
 {
   "imports": {

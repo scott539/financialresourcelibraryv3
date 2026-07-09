@@ -316,6 +316,16 @@ export const syncStaticResources = async (staticResources: Resource[]): Promise<
             }
         }
 
+        // SEED-ONLY strategy:
+        // We only create static resources in Firestore if they don't already exist.
+        // Once a resource exists in Firestore, it becomes the source of truth and can be
+        // freely edited through the Admin dashboard WITHOUT being overwritten on the next
+        // admin login. This prevents the data-loss trap where admin edits were silently
+        // reverted back to the hard-coded values in staticResources.ts.
+        //
+        // NOTE: If you intentionally change a resource's baseline values in staticResources.ts
+        // and want those changes reflected for an ALREADY-SEEDED resource, edit it through the
+        // Admin dashboard (or delete the Firestore doc so it re-seeds from the static file).
         for (const res of staticResources) {
             const docRef = doc(db, 'resources', res.id);
             const docSnap = await getDoc(docRef);
@@ -327,38 +337,11 @@ export const syncStaticResources = async (staticResources: Resource[]): Promise<
                     updatedAt: serverTimestamp(),
                 });
             } else {
-                console.log(`[API] Syncing and updating resource metadata in Firestore: ${res.title}`);
-                const currentData = docSnap.data();
-                
-                // Intelligently handle download counts:
-                // If the static resource defines a baseline downloadCount, we ensure the database count is at least that amount.
-                let newDownloadCount = currentData?.downloadCount || 0;
-                if (typeof res.downloadCount === 'number' && res.downloadCount > newDownloadCount) {
-                    newDownloadCount = res.downloadCount;
-                }
-
-                await updateDoc(docRef, {
-                    title: res.title,
-                    description: res.description,
-                    longDescription: res.longDescription || '',
-                    category: res.category,
-                    type: res.type,
-                    tags: res.tags || [],
-                    googleDriveUrl: res.googleDriveUrl || '',
-                    fileUrl: res.fileUrl || '',
-                    fileName: res.fileName || '',
-                    imageUrl: res.imageUrl || '',
-                    isComingSoon: res.isComingSoon || false,
-                    isHidden: res.isHidden || false,
-                    isOpenDirectly: res.isOpenDirectly || false,
-                    isFeatured: res.isFeatured || false,
-                    actionLabel: res.actionLabel || null,
-                    downloadCount: newDownloadCount,
-                    updatedAt: serverTimestamp(),
-                });
+                // Resource already exists — do NOT overwrite. Admin edits are preserved.
+                console.log(`[API] Resource already present, preserving existing data (no overwrite): ${res.title}`);
             }
         }
-        console.log("[API] Static resources sync completed.");
+        console.log("[API] Static resources sync (seed-only) completed.");
     } catch (err) {
         console.error("[API] Failed to sync static resources:", err);
     }

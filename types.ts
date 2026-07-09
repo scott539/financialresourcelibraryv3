@@ -2,6 +2,7 @@
 
 export enum ResourceType {
   PDF = 'PDF',
+  SPREADSHEET = 'Spreadsheet',
   WEB_APP = 'Web App',
   DOCUMENT = 'Document',
   PRESENTATION = 'Presentation',
@@ -75,3 +76,12 @@ export interface Lead {
 }
 
 export const ALL_TAGS = Object.values(Tag);
+
+// Layout options for embeddable resource modules.
+// 'wide'    -> full desktop-width horizontal card (large featured module)
+// 'compact' -> tall/skinny vertical card (matches the home page grid card)
+export type EmbedLayout = 'wide' | 'compact';
+
+export const EMBED_LAYOUTS: EmbedLayout[] = ['wide', 'compact'];
+
+export const DEFAULT_EMBED_LAYOUT: EmbedLayout = 'compact';

@@ -24,6 +24,18 @@ const formatDate = (timestamp: any): string | null => {
   }).format(date);
 };
 
+// Returns a sensible default button label based on the resource's file type.
+const getOpenLabel = (type: ResourceType): string => {
+  switch (type) {
+    case ResourceType.PDF: return 'Read Guide';
+    case ResourceType.SPREADSHEET: return 'Open Spreadsheet';
+    case ResourceType.PRESENTATION: return 'Open Presentation';
+    case ResourceType.DOCUMENT: return 'Open Document';
+    case ResourceType.WEB_APP: return 'Open Tool';
+    default: return 'Open Resource';
+  }
+};
+
 const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, onDownload, onGoogleDriveClick }) => {
   const { id } = useParams<{ id: string }>();
   
@@ -110,7 +122,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
     switch (resource.type) {
       case ResourceType.PDF: return <PdfIcon />;
       case ResourceType.WEB_APP:
-      case 'Spreadsheet' as any: return <SpreadsheetIcon />;
+      case ResourceType.SPREADSHEET: return <SpreadsheetIcon />;
       case ResourceType.DOCUMENT: return <DocumentIcon />;
       case ResourceType.PRESENTATION: return <PresentationIcon />;
       case ResourceType.IMAGE: return <ImageIcon />;
@@ -123,7 +135,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
   const getTypeTheme = () => {
     switch (resource.type) {
       case ResourceType.WEB_APP:
-      case 'Spreadsheet' as any:
+      case ResourceType.SPREADSHEET:
         return {
           bg: 'bg-emerald-50 text-emerald-700 border-emerald-100',
           dot: 'bg-emerald-500'
@@ -265,10 +277,10 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
                       handleDownloadClick();
                     }}
                     className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-6 py-3.5 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-350 cursor-pointer active:scale-[0.98] font-bold text-sm uppercase tracking-wider"
-                    title={resource.actionLabel || (resource.type === ResourceType.PDF ? 'Read Strategy Guide' : 'Open Calculator')}
+                    title={resource.actionLabel || getOpenLabel(resource.type)}
                   >
                     <LinkIcon className="w-4 h-4 text-white" />
-                    <span>{resource.actionLabel || (resource.type === ResourceType.PDF ? 'Read Strategy Guide' : 'Open Calculator')}</span>
+                    <span>{resource.actionLabel || getOpenLabel(resource.type)}</span>
                   </a>
                 ) : (
                   <>

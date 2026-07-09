@@ -22,6 +22,19 @@ const formatDate = (timestamp: any): string | null => {
   }).format(date);
 };
 
+// Returns a sensible default button label based on the resource's file type.
+// Used only when a resource does not define an explicit actionLabel.
+const getOpenLabel = (type: ResourceType): string => {
+  switch (type) {
+    case ResourceType.PDF: return 'Read Guide';
+    case ResourceType.SPREADSHEET: return 'Open Spreadsheet';
+    case ResourceType.PRESENTATION: return 'Open Presentation';
+    case ResourceType.DOCUMENT: return 'Open Document';
+    case ResourceType.WEB_APP: return 'Open Tool';
+    default: return 'Open Resource';
+  }
+};
+
 const ResourceCard: React.FC<ResourceCardProps> = ({ 
   resource, 
   onDownloadClick, 
@@ -57,7 +70,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   const getTypeTheme = () => {
     switch (type) {
       case ResourceType.WEB_APP:
-      case 'Spreadsheet' as any:
+      case ResourceType.SPREADSHEET:
         return {
           bg: 'bg-emerald-50 text-emerald-700 border-emerald-100',
           dot: 'bg-emerald-500',
@@ -107,9 +120,11 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-black/5 pointer-events-none" />
           
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-            <span className="bg-primary px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-md backdrop-blur-sm">
-              Featured Tool
-            </span>
+            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+              <span className="bg-primary px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-md backdrop-blur-sm">
+                Featured Tool
+              </span>
+            )}
             {isComingSoon && (
               <span className="bg-amber-400 text-slate-950 px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md">
                 Coming Soon
@@ -182,16 +197,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
           {/* Action Buttons Section */}
           <div className="border-t border-slate-100 pt-5 flex flex-col sm:flex-row gap-3">
-            {resource.id === 'bp-personal-financial-statement' ? (
-              <Link
-                to={`/preview/${resource.id}`}
-                className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-5 py-3 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer active:scale-[0.98] font-bold text-xs uppercase tracking-wider"
-                title={actionLabel || 'Open Calculator'}
-              >
-                <LinkIcon className="w-4 h-4 text-white" />
-                <span>{actionLabel || 'Open Calculator'}</span>
-              </Link>
-            ) : isOpenDirectly ? (
+            {isOpenDirectly ? (
               <a
                 href={googleDriveUrl || fileUrl || '#'}
                 target="_blank"
@@ -201,10 +207,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                   onDownloadClick(resource);
                 }}
                 className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-5 py-3 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer active:scale-[0.98] font-bold text-xs uppercase tracking-wider"
-                title={actionLabel || (type === 'PDF' ? 'Read Strategy Guide' : 'Open Calculator')}
+                title={actionLabel || getOpenLabel(type)}
               >
                 <LinkIcon className="w-4 h-4 text-white" />
-                <span>{actionLabel || (type === 'PDF' ? 'Read Strategy Guide' : 'Open Calculator')}</span>
+                <span>{actionLabel || getOpenLabel(type)}</span>
               </a>
             ) : (
               <>
@@ -337,16 +343,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
           {/* Action Buttons */}
           <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col gap-1.5">
-            {resource.id === 'bp-personal-financial-statement' ? (
-              <Link
-                to={`/preview/${resource.id}`}
-                className="w-full text-center bg-primary hover:bg-primary-dark text-white px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer active:scale-[0.98] text-[11px] font-bold uppercase tracking-wider"
-                title={actionLabel || 'Open Calculator'}
-              >
-                <LinkIcon className="w-3 h-3 text-white" />
-                <span>{actionLabel || 'Open Calculator'}</span>
-              </Link>
-            ) : isOpenDirectly ? (
+            {isOpenDirectly ? (
               <a
                 href={googleDriveUrl || fileUrl || '#'}
                 target="_blank"
@@ -356,10 +353,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                   onDownloadClick(resource);
                 }}
                 className="w-full text-center bg-primary hover:bg-primary-dark text-white px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer active:scale-[0.98] text-[11px] font-bold uppercase tracking-wider"
-                title={actionLabel || (type === 'PDF' ? 'Read Strategy Guide' : 'Open Calculator')}
+                title={actionLabel || getOpenLabel(type)}
               >
                 <LinkIcon className="w-3 h-3 text-white" />
-                <span>{actionLabel || (type === 'PDF' ? 'Read Strategy Guide' : 'Open Calculator')}</span>
+                <span>{actionLabel || getOpenLabel(type)}</span>
               </a>
             ) : (
               <>
