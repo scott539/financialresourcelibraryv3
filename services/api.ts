@@ -1,15 +1,19 @@
 
 import { Lead, Resource } from '../types';
 import { auth, db, storage } from '../firebaseConfig';
+import { STATIC_RESOURCES } from '../data/staticResources';
 import {
   collection,
   getDocs,
+  getDoc,
+  setDoc,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
   serverTimestamp,
   runTransaction,
+  onSnapshot,
 } from 'firebase/firestore';
 import {
   ref,
@@ -57,6 +61,20 @@ export const getResources = async (): Promise<Resource[]> => {
   }
 };
 
+export const subscribeResources = (
+  onUpdate: (resources: Resource[]) => void,
+  onError?: (err: any) => void
+): (() => void) => {
+  const resourcesCol = collection(db, 'resources');
+  return onSnapshot(resourcesCol, (snapshot) => {
+    const resources = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Resource));
+    onUpdate(resources);
+  }, (err) => {
+    console.error("[API] Real-time subscription failed:", err);
+    if (onError) onError(err);
+  });
+};
+
 const uploadFile = async (file: File | Blob | string, path: string, fileName: string): Promise<string> => {
     const bucketName = storage.app.options.storageBucket;
     console.log(`[API] Attempting upload to bucket: ${bucketName} at path: ${path}`);
@@ -94,7 +112,7 @@ const uploadFile = async (file: File | Blob | string, path: string, fileName: st
 };
 
 
-export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>, fileToUpload?: File): Promise<Resource> => {
+export const addResource = async (resourceData: Omit<Resource, 'id'>, fileToUpload?: File): Promise<Resource> => {
   let imageUrl = resourceData.imageUrl;
   
   if (imageUrl && imageUrl.startsWith('data:')) {
@@ -113,6 +131,7 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
   }
 
   const liveDateForDb = resourceData.liveDate ? new Date(resourceData.liveDate) : null;
+  const initialDownloadCount = typeof resourceData.downloadCount === 'number' ? resourceData.downloadCount : 0;
 
   const docRef = await addDoc(collection(db, 'resources'), {
     ...resourceData,
@@ -120,12 +139,12 @@ export const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadC
     fileUrl,
     fileName,
     liveDate: liveDateForDb,
-    downloadCount: 0,
+    downloadCount: initialDownloadCount,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   
-  return { ...resourceData, id: docRef.id, downloadCount: 0, fileUrl, fileName };
+  return { ...resourceData, id: docRef.id, downloadCount: initialDownloadCount, fileUrl, fileName };
 };
 
 export const updateResource = async (updatedResource: Resource, fileToUpload?: File): Promise<Resource> => {
@@ -178,7 +197,12 @@ export const getLeads = async (): Promise<Lead[]> => {
     }
 }
 
-export const addLead = async (resourceId: string, resourceTitle: string, leadData: { firstName: string; email: string; hasConsented: boolean; }): Promise<Lead> => {
+export const addLead = async (
+    resourceId: string, 
+    resourceTitle: string, 
+    leadData: { firstName: string; email: string; hasConsented: boolean; },
+    incrementCount: boolean = true
+): Promise<Lead> => {
     const newLead: Omit<Lead, 'id'> = {
         ...leadData,
         resourceId,
@@ -188,16 +212,29 @@ export const addLead = async (resourceId: string, resourceTitle: string, leadDat
 
     const docRef = await addDoc(collection(db, 'leads'), newLead);
 
-    try {
-        const resourceRef = doc(db, 'resources', resourceId);
-        await runTransaction(db, async (transaction) => {
-            const resourceDoc = await transaction.get(resourceRef);
-            if (!resourceDoc.exists()) return;
-            const newCount = (resourceDoc.data().downloadCount || 0) + 1;
-            transaction.update(resourceRef, { downloadCount: newCount });
-        });
-    } catch (error) {
-        console.error("Failed to increment counter:", error);
+    if (incrementCount) {
+        try {
+            const resourceRef = doc(db, 'resources', resourceId);
+            await runTransaction(db, async (transaction) => {
+                const resourceDoc = await transaction.get(resourceRef);
+                if (!resourceDoc.exists()) {
+                    const staticRes = STATIC_RESOURCES.find(r => r.id === resourceId);
+                    if (staticRes) {
+                        transaction.set(resourceRef, {
+                            ...staticRes,
+                            downloadCount: (staticRes.downloadCount || 0) + 1,
+                            createdAt: serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+                } else {
+                    const newCount = (resourceDoc.data().downloadCount || 0) + 1;
+                    transaction.update(resourceRef, { downloadCount: newCount });
+                }
+            });
+        } catch (error) {
+            console.error("Failed to increment counter:", error);
+        }
     }
 
     return { ...newLead, id: docRef.id };
@@ -208,9 +245,20 @@ export const incrementResourceAccessCount = async (resourceId: string): Promise<
         const resourceRef = doc(db, 'resources', resourceId);
         await runTransaction(db, async (transaction) => {
             const resourceDoc = await transaction.get(resourceRef);
-            if (!resourceDoc.exists()) return;
-            const newCount = (resourceDoc.data().downloadCount || 0) + 1;
-            transaction.update(resourceRef, { downloadCount: newCount });
+            if (!resourceDoc.exists()) {
+                const staticRes = STATIC_RESOURCES.find(r => r.id === resourceId);
+                if (staticRes) {
+                    transaction.set(resourceRef, {
+                        ...staticRes,
+                        downloadCount: (staticRes.downloadCount || 0) + 1,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    });
+                }
+            } else {
+                const newCount = (resourceDoc.data().downloadCount || 0) + 1;
+                transaction.update(resourceRef, { downloadCount: newCount });
+            }
         });
     } catch (error) {
         console.error("Failed to increment access count:", error);
@@ -241,5 +289,77 @@ export const updateCredentials = async (currentPass: string, newEmail: string, n
         return true;
     } catch (error) {
         return false;
+    }
+};
+
+export const syncStaticResources = async (staticResources: Resource[]): Promise<void> => {
+    try {
+        if (!auth.currentUser) {
+            console.log("[API] Skipping static resources sync: user not authenticated.");
+            return;
+        }
+        
+        console.log("[API] Checking and syncing static resources to Firestore...");
+        
+        // Delete legacy removed static resources from Firestore to ensure they do not show up in public lists
+        const legacyToClean: string[] = [];
+        for (const legacyId of legacyToClean) {
+            const legacyRef = doc(db, 'resources', legacyId);
+            try {
+                const legacySnap = await getDoc(legacyRef);
+                if (legacySnap.exists()) {
+                    console.log(`[API] Cleaning up legacy resource from Firestore: ${legacyId}`);
+                    await deleteDoc(legacyRef);
+                }
+            } catch (e) {
+                console.warn(`[API] Failed to check/delete legacy resource ${legacyId}:`, e);
+            }
+        }
+
+        for (const res of staticResources) {
+            const docRef = doc(db, 'resources', res.id);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                console.log(`[API] Seeding missing resource to Firestore: ${res.title}`);
+                await setDoc(docRef, {
+                    ...res,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+            } else {
+                console.log(`[API] Syncing and updating resource metadata in Firestore: ${res.title}`);
+                const currentData = docSnap.data();
+                
+                // Intelligently handle download counts:
+                // If the static resource defines a baseline downloadCount, we ensure the database count is at least that amount.
+                let newDownloadCount = currentData?.downloadCount || 0;
+                if (typeof res.downloadCount === 'number' && res.downloadCount > newDownloadCount) {
+                    newDownloadCount = res.downloadCount;
+                }
+
+                await updateDoc(docRef, {
+                    title: res.title,
+                    description: res.description,
+                    longDescription: res.longDescription || '',
+                    category: res.category,
+                    type: res.type,
+                    tags: res.tags || [],
+                    googleDriveUrl: res.googleDriveUrl || '',
+                    fileUrl: res.fileUrl || '',
+                    fileName: res.fileName || '',
+                    imageUrl: res.imageUrl || '',
+                    isComingSoon: res.isComingSoon || false,
+                    isHidden: res.isHidden || false,
+                    isOpenDirectly: res.isOpenDirectly || false,
+                    isFeatured: res.isFeatured || false,
+                    actionLabel: res.actionLabel || null,
+                    downloadCount: newDownloadCount,
+                    updatedAt: serverTimestamp(),
+                });
+            }
+        }
+        console.log("[API] Static resources sync completed.");
+    } catch (err) {
+        console.error("[API] Failed to sync static resources:", err);
     }
 };

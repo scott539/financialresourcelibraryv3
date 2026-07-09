@@ -1,56 +1,63 @@
 (function() {
-    // Prevent multiple initializations
-    if (window.BPMoneyLibraryInitialized) return;
-    window.BPMoneyLibraryInitialized = true;
+  // Find the target container
+  const container = document.getElementById('bp-money-library') || document.getElementById('bp-money-library-root');
+  if (!container) {
+    console.warn('BiggerPockets Money Library container (#bp-money-library) not found.');
+    return;
+  }
 
-    // Find the container element
-    var container = document.getElementById('bp-money-library');
-    if (!container) {
-        console.error('BP Money Library: Container <div id="bp-money-library"></div> not found.');
-        return;
-    }
+  // Prevent duplicate iframe injection
+  if (container.querySelector('iframe')) return;
 
-    // Determine the source URL. It should point to the domain where the React app is hosted.
-    // If the script is loaded from the React app, we can use the script's src to infer the origin.
-    var scripts = document.getElementsByTagName('script');
-    var currentScript = scripts[scripts.length - 1];
-    var origin = 'https://financialresourcelibraryv3.vercel.app'; // Default fallback
-
+  // Determine the base URL dynamically from the script source
+  const currentScript = document.currentScript;
+  const scriptUrl = currentScript ? currentScript.src : '';
+  let baseUrl = 'https://ais-pre-haidiskwkybbkvl4lcecgc-619184583394.us-west2.run.app';
+  if (scriptUrl) {
     try {
-        if (currentScript && currentScript.src) {
-            var url = new URL(currentScript.src);
-            origin = url.origin;
-        }
+      baseUrl = new URL(scriptUrl).origin;
     } catch (e) {
-        console.warn('BP Money Library: Could not determine origin from script tag, using default.');
+      console.error('Error parsing script source URL:', e);
     }
+  }
 
-    // Create the iframe
-    var iframe = document.createElement('iframe');
-    iframe.src = origin;
-    iframe.style.width = '100%';
-    iframe.style.border = 'none';
-    iframe.style.overflow = 'hidden';
-    iframe.scrolling = 'no';
-    
-    // Add it to the container
-    container.appendChild(iframe);
+  // Check if a specific resource is requested via data attribute
+  const resourceId = container.getAttribute('data-resource-id') || '';
+  let iframeUrl = baseUrl + '/#/';
+  if (resourceId) {
+    iframeUrl = baseUrl + '/#/embed/' + resourceId;
+  }
 
-    // Listen for resize messages from the iframe
-    window.addEventListener('message', function(event) {
-        // Validate message structure
-        if (!event.data || typeof event.data !== 'object') return;
+  // Create and style the iframe
+  const iframe = document.createElement('iframe');
+  iframe.src = iframeUrl;
+  iframe.style.width = '100%';
+  iframe.style.height = '600px'; // Robust default height during load
+  iframe.style.border = 'none';
+  iframe.style.overflow = 'hidden';
+  iframe.style.display = 'block';
+  iframe.style.transition = 'height 0.2s ease-out';
+  iframe.id = 'bp-library-iframe';
+  iframe.setAttribute('title', 'BiggerPockets Money Financial Resource Library');
+  iframe.setAttribute('scrolling', 'no');
+
+  // Insert the iframe into the container
+  container.appendChild(iframe);
+
+  // Set up message listener for seamless responsive height adjustments
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'financial-library-resize') {
+      const height = parseInt(e.data.height, 10);
+      if (!isNaN(height) && height > 0) {
+        // Enforce a minimum safe height of 450px to prevent visual clipping
+        iframe.style.height = Math.max(450, height) + 'px';
         
-        // Handle resize message
-        if (event.data.type === 'financial-library-resize' && event.data.height) {
-            var newHeight = parseInt(event.data.height, 10);
-            if (newHeight > 0) {
-                // Add a small buffer and only update if it actually changed
-                var targetHeight = (newHeight + 10) + 'px';
-                if (iframe.style.height !== targetHeight) {
-                    iframe.style.height = targetHeight;
-                }
-            }
+        // Hide loader once the first resize message (successful load) is received
+        const loader = document.getElementById('bp-library-loader');
+        if (loader) {
+          loader.style.display = 'none';
         }
-    });
+      }
+    }
+  }, false);
 })();

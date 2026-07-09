@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -9,11 +9,13 @@ import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import EmbedResourcePage from './pages/EmbedResourcePage';
+import PreviewResourcePage from './pages/PreviewResourcePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
+import { STATIC_RESOURCES } from './data/staticResources';
 
 const AppContent: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -22,10 +24,11 @@ const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const location = useLocation();
 
   // Check if we are in "headless" mode for embedding
-  const isEmbedMode = window.self !== window.top || location.pathname.startsWith('/embed/');
+  const isEmbedMode = location.pathname.startsWith('/embed/');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -42,54 +45,107 @@ const AppContent: React.FC = () => {
       api.getResources(),
       isAuthenticated ? api.getLeads() : Promise.resolve([]),
     ]);
-    setResources(fetchedResources);
+    
+    // Merge database resources and static resources, ensuring we don't duplicate by ID or exact title
+    const mergedResources = [...fetchedResources];
+    for (const staticRes of STATIC_RESOURCES) {
+      if (!mergedResources.some(r => r.id === staticRes.id || r.title.toLowerCase() === staticRes.title.toLowerCase())) {
+        mergedResources.push(staticRes);
+      }
+    }
+
+    // Apply session storage fallback to prevent count resetting on instant refreshes or slow background writes
+    try {
+      mergedResources.forEach(res => {
+        const sessionKey = `bp_accessed_${res.id}`;
+        if (sessionStorage.getItem(sessionKey)) {
+          const baseline = STATIC_RESOURCES.find(s => s.id === res.id)?.downloadCount || 0;
+          const expectedMin = (baseline || 0) + 1;
+          if ((res.downloadCount || 0) < expectedMin) {
+            res.downloadCount = expectedMin;
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Error applying session storage fallback:', e);
+    }
+
+    setResources(mergedResources);
     setLeads(fetchedLeads);
     setIsLoading(false);
+    setIsInitialLoad(false);
   }, [isAuthenticated]);
 
+  // Real-time synchronization of resources
   useEffect(() => {
-    if (!isAuthLoading) {
+    if (isAuthLoading) return;
+
+    const unsubscribe = api.subscribeResources((fetchedResources) => {
+      const mergedResources = [...fetchedResources];
+      for (const staticRes of STATIC_RESOURCES) {
+        if (!mergedResources.some(r => r.id === staticRes.id || r.title.toLowerCase() === staticRes.title.toLowerCase())) {
+          mergedResources.push(staticRes);
+        }
+      }
+
+      try {
+        mergedResources.forEach(res => {
+          const sessionKey = `bp_accessed_${res.id}`;
+          if (sessionStorage.getItem(sessionKey)) {
+            const baseline = STATIC_RESOURCES.find(s => s.id === res.id)?.downloadCount || 0;
+            const expectedMin = (baseline || 0) + 1;
+            if ((res.downloadCount || 0) < expectedMin) {
+              res.downloadCount = expectedMin;
+            }
+          }
+        });
+      } catch (e) {
+        console.error('Error applying session storage fallback:', e);
+      }
+
+      setResources(mergedResources);
+      setIsLoading(false);
+      setIsInitialLoad(false);
+    }, (err) => {
+      console.error("Real-time subscription failed, falling back to manual fetch:", err);
       fetchData();
+    });
+
+    return () => unsubscribe();
+  }, [isAuthLoading, fetchData]);
+
+  // Sync static resources to Firestore when an authenticated admin/dev session starts
+  useEffect(() => {
+    if (isAuthenticated) {
+      const syncAndReload = async () => {
+        await api.syncStaticResources(STATIC_RESOURCES);
+        fetchData();
+      };
+      syncAndReload();
     }
-  }, [fetchData, isAuthLoading]);
+  }, [isAuthenticated, fetchData]);
 
   useEffect(() => {
     if (window.self === window.top) return;
     
     let rafId: number;
-    let lastHeight = 0;
-    
     const postHeight = () => {
       rafId = requestAnimationFrame(() => {
-        const wrapper = document.getElementById('bp-app-wrapper');
-        if (wrapper) {
-          // Use scrollHeight to get the true content height, 
-          // independent of the window/iframe expanding
-          const height = wrapper.scrollHeight;
-          if (Math.abs(height - lastHeight) > 2) {
-            lastHeight = height;
-            window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
-          }
-        }
+        const height = document.documentElement.scrollHeight;
+        window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
       });
     };
 
-    const wrapper = document.getElementById('bp-app-wrapper');
     const observer = new ResizeObserver(postHeight);
-    
-    if (wrapper) {
-      observer.observe(wrapper);
-    }
-    
-    // Also listen to window resize to catch layout shifts
-    window.addEventListener('resize', postHeight);
+    observer.observe(document.documentElement);
+    document.addEventListener('transitionend', postHeight);
     
     postHeight();
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
-      window.removeEventListener('resize', postHeight);
+      document.removeEventListener('transitionend', postHeight);
     };
   }, []);
 
@@ -105,13 +161,31 @@ const AppContent: React.FC = () => {
     return await api.updateCredentials(currentPass, newUser, newPass);
   };
 
-  const addLeadAndDownload = async (resourceId: string, leadData: { firstName: string; email: string; hasConsented: boolean; }) => {
+  const addLeadAndDownload = async (
+    resourceId: string, 
+    leadData: { firstName: string; email: string; hasConsented: boolean; },
+    triggerFileDownload: boolean = true
+  ) => {
     const resource = resources.find(r => r.id === resourceId);
     if (!resource) return;
 
-    await api.addLead(resourceId, resource.title, leadData);
+    // Use sessionStorage to de-duplicate increments on the client side per browser tab session
+    const sessionKey = `bp_accessed_${resourceId}`;
+    const alreadyAccessed = sessionStorage.getItem(sessionKey);
+    const shouldIncrement = !alreadyAccessed;
+
+    if (shouldIncrement) {
+      sessionStorage.setItem(sessionKey, 'true');
+      // Update local React state instantly so the user sees the count increment by 1 immediately
+      setResources(prev => prev.map(r => r.id === resourceId ? { ...r, downloadCount: (r.downloadCount || 0) + 1 } : r));
+    }
+
+    // Log the lead in the background. Only increment the Firestore download/view count if not already accessed in this session.
+    api.addLead(resourceId, resource.title, leadData, shouldIncrement)
+      .then(() => fetchData())
+      .catch((err) => console.error('Error logging lead:', err));
     
-    if (!resource.isComingSoon && resource.fileUrl) {
+    if (triggerFileDownload && !resource.isComingSoon && resource.fileUrl && !resource.isOpenDirectly) {
       const link = document.createElement('a');
       link.href = resource.fileUrl;
       link.target = '_blank';
@@ -120,16 +194,27 @@ const AppContent: React.FC = () => {
       link.click();
       document.body.removeChild(link);
     }
-    
-    fetchData();
   };
 
-  const handleGoogleDriveClick = async (resourceId: string) => {
-    await api.incrementResourceAccessCount(resourceId);
-    fetchData();
+  const handleGoogleDriveClick = (resourceId: string) => {
+    // Use sessionStorage to de-duplicate increments on the client side per browser tab session
+    const sessionKey = `bp_accessed_${resourceId}`;
+    const alreadyAccessed = sessionStorage.getItem(sessionKey);
+    const shouldIncrement = !alreadyAccessed;
+
+    if (shouldIncrement) {
+      sessionStorage.setItem(sessionKey, 'true');
+      // Update local React state instantly so the user sees the count increment by 1 immediately
+      setResources(prev => prev.map(r => r.id === resourceId ? { ...r, downloadCount: (r.downloadCount || 0) + 1 } : r));
+
+      // Increment access in the background so we do not wait or expire the user click gesture
+      api.incrementResourceAccessCount(resourceId)
+        .then(() => fetchData())
+        .catch((err) => console.error('Error incrementing resource access:', err));
+    }
   };
 
-  const addResource = async (resourceData: Omit<Resource, 'id' | 'downloadCount'>, file?: File) => {
+  const addResource = async (resourceData: Omit<Resource, 'id'>, file?: File) => {
     await api.addResource(resourceData, file);
     fetchData();
   };
@@ -147,7 +232,24 @@ const AppContent: React.FC = () => {
     }
   };
 
-  if (isLoading || isAuthLoading) {
+  // Hide site chrome (Header, Footer, BottomNav) if in embed mode or on the main resource directory/privacy pages when embedded,
+  // allowing seamless direct embedding into BiggerPockets' existing website without layout overlap.
+  // We keep the chrome fully visible if visited standalone (not in an iframe), in development/preview environments, or if logged in as an admin.
+  const isEmbedded = window.self !== window.top;
+  const showManage = !!(isAuthenticated && currentUser && !currentUser.isAnonymous);
+  
+  const isDevelopmentOrPreview = (): boolean => {
+    const hostname = window.location.hostname;
+    return (
+      hostname.includes('localhost') ||
+      hostname.includes('run.app') ||
+      hostname.includes('web-preview')
+    );
+  };
+
+  const isChromeHidden = isEmbedMode || (isEmbedded && !isDevelopmentOrPreview() && (location.pathname === '/' || location.pathname === '' || location.pathname === '/privacy') && !showManage);
+
+  if ((isLoading && isInitialLoad) || isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl font-semibold text-slate">Loading...</div>
@@ -156,19 +258,30 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div id="bp-app-wrapper" className={`flex flex-col ${isEmbedMode ? 'bg-transparent' : 'min-h-screen bg-background-light'}`}>
-      {!isEmbedMode && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />}
+    <div className={`flex flex-col ${isChromeHidden ? 'bg-transparent' : 'min-h-screen bg-paper'}`}>
+      {!showManage && !isChromeHidden && !isEmbedded && (
+        <Link
+          id="admin-public-floating-btn"
+          to="/admin"
+          className="fixed top-3 right-4 z-[9999] text-[10px] sm:text-[11px] text-slate-400 hover:text-slate-600 transition-all duration-200 font-semibold tracking-wider uppercase px-2 py-1 select-none opacity-40 hover:opacity-100 cursor-pointer bg-white/20 hover:bg-slate-100/50 rounded"
+          title="Admin Area"
+        >
+          Admin
+        </Link>
+      )}
+      {showManage && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} showManage={showManage} />}
 
-      <main className={`flex-grow ${!isEmbedMode ? 'pb-16 md:pb-0' : ''}`}>
+      <main className={`flex-grow ${!isChromeHidden ? 'pb-16 md:pb-0' : ''}`}>
         <Routes>
-          <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
+          <Route path="/" element={<HomePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} showManage={showManage} />} />
           <Route path="/embed/:id" element={<EmbedResourcePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
+          <Route path="/preview/:id" element={<PreviewResourcePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route 
             path="/admin"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute isAuthenticated={showManage}>
                 <AdminPage 
                   resources={resources} 
                   leads={leads}
@@ -181,11 +294,13 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          {/* Wildcard catch-all route to guarantee no route change (e.g. from ConvertKit hash anchors) ever causes a blank screen */}
+          <Route path="*" element={<HomePage resources={resources} onDownload={addLeadAndDownload} onGoogleDriveClick={handleGoogleDriveClick} showManage={showManage} />} />
         </Routes>
       </main>
       
-      {!isEmbedMode && <Footer isAuthenticated={isAuthenticated} />}
-      {!isEmbedMode && <BottomNav isAuthenticated={isAuthenticated} onLogout={handleLogout} />}
+      {!isChromeHidden && <Footer showManage={showManage} />}
+      {!isChromeHidden && <BottomNav isAuthenticated={isAuthenticated} onLogout={handleLogout} showManage={showManage} />}
     </div>
   );
 };

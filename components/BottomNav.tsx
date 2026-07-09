@@ -5,9 +5,10 @@ import { HomeIcon, AdminIcon, LoginIcon, LogoutIcon } from './icons';
 interface BottomNavProps {
   isAuthenticated: boolean;
   onLogout: () => void;
+  showManage: boolean;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ isAuthenticated, onLogout }) => {
+export const BottomNav: React.FC<BottomNavProps> = ({ isAuthenticated, onLogout, showManage }) => {
   const activeLinkClass = "text-primary";
   const defaultLinkClass = "text-slate hover:text-primary";
   const baseLinkClass = "flex flex-col items-center justify-center flex-1 py-2 px-1 text-xs sm:text-sm font-medium transition-colors duration-200";
@@ -24,25 +25,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ isAuthenticated, onLogout 
             <HomeIcon />
             <span>Resources</span>
           </NavLink>
-          {isAuthenticated ? (
-            <>
-              <NavLink
-                to="/admin"
-                className={({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : defaultLinkClass}`}
-              >
-                <AdminIcon />
-                <span>Admin</span>
-              </NavLink>
-              <button onClick={onLogout} className={`${baseLinkClass} ${defaultLinkClass}`}>
-                <LogoutIcon />
-                <span>Logout</span>
-              </button>
-            </>
-          ) : (
-             <NavLink to="/login" className={({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : defaultLinkClass}`}>
-                <LoginIcon />
-                <span>Admin Login</span>
-            </NavLink>
+          {showManage && (
+            <button onClick={onLogout} className={`${baseLinkClass} ${defaultLinkClass}`}>
+              <LogoutIcon />
+              <span>Logout</span>
+            </button>
           )}
         </div>
       </nav>

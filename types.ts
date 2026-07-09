@@ -2,7 +2,7 @@
 
 export enum ResourceType {
   PDF = 'PDF',
-  SPREADSHEET = 'Spreadsheet',
+  WEB_APP = 'Web App',
   DOCUMENT = 'Document',
   PRESENTATION = 'Presentation',
   IMAGE = 'Image',
@@ -53,6 +53,9 @@ export interface Resource {
   fileUrl: string;
   fileName: string;
   googleDriveUrl?: string;
+  longDescription?: string;
+  isOpenDirectly?: boolean;
+  actionLabel?: string;
   isHidden?: boolean;
   isFeatured?: boolean;
   featuredUntil?: string | null;

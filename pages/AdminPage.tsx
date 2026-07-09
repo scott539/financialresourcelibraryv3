@@ -10,14 +10,14 @@ type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
 interface AdminPageProps {
   resources: Resource[];
   leads: Lead[];
-  addResource: (resource: Omit<Resource, 'id' | 'downloadCount'>, file?: File) => Promise<void>;
+  addResource: (resource: Omit<Resource, 'id'>, file?: File) => Promise<void>;
   updateResource: (resource: Resource, file?: File) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
   adminUsername: string;
   updateCredentials: (currentPass: string, newUser: string, newPass: string) => Promise<boolean>;
 }
 
-const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
+const emptyResource: Omit<Resource, 'id'> = {
   title: '',
   description: '',
   type: ResourceType.PDF,
@@ -31,6 +31,7 @@ const emptyResource: Omit<Resource, 'id' | 'downloadCount'> = {
   isHidden: false,
   isFeatured: false,
   liveDate: '',
+  downloadCount: 0,
 };
 
 const fileToDataURL = (file: File): Promise<string> => {
@@ -113,8 +114,8 @@ const FileUploadZone: React.FC<FileUploadZoneProps> = ({ onFileUpload, previewUr
 };
 
 interface ResourceFormProps {
-    onSubmit: (resource: Omit<Resource, 'id' | 'downloadCount'> | Resource, file?: File) => Promise<void>;
-    initialData: Omit<Resource, 'id' | 'downloadCount'> | Resource | null;
+    onSubmit: (resource: Omit<Resource, 'id'> | Resource, file?: File) => Promise<void>;
+    initialData: Omit<Resource, 'id'> | Resource | null;
     onCancel: () => void;
     resources: Resource[];
 }
@@ -146,7 +147,14 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
         // @ts-ignore
         const checked = e.target.checked;
         
-        setFormData(prev => ({ ...prev, [name]: isCheckbox ? checked : value }));
+        setFormData(prev => {
+            let val: any = isCheckbox ? checked : value;
+            if (name === 'downloadCount') {
+                val = value === '' ? 0 : parseInt(value, 10);
+                if (isNaN(val)) val = 0;
+            }
+            return { ...prev, [name]: val };
+        });
     };
 
     const handleTagChange = (tag: Tag) => {
@@ -299,6 +307,20 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                                 </button>
                             </div>
                         </div>
+                        <div>
+                            <label htmlFor="downloadCount" className="block text-sm font-medium text-gray-700">Views / Downloads Count (Initial Offset)</label>
+                            <input
+                                id="downloadCount"
+                                type="number"
+                                name="downloadCount"
+                                min="0"
+                                value={formData.downloadCount || 0}
+                                onChange={handleChange}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                placeholder="0"
+                            />
+                            <p className="text-[10px] text-gray-400 mt-1">Set this to match Google Analytics historical downloads/views. Future clicks will add to this starting number.</p>
+                        </div>
                         <label className="flex items-center space-x-3 p-2 border rounded-md bg-gray-100 cursor-not-allowed">
                             <input
                                 type="checkbox"
@@ -399,7 +421,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
     }
   };
 
-  const handleFormSubmit = async (resourceData: Omit<Resource, 'id' | 'downloadCount'> | Resource, file?: File) => {
+  const handleFormSubmit = async (resourceData: Omit<Resource, 'id'> | Resource, file?: File) => {
     if ('id' in resourceData) {
       await updateResource(resourceData as Resource, file);
     } else {
@@ -614,7 +636,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ resources, leads, addResource, up
                                                 <DownloadIcon className="w-3.5 h-3.5 mr-1 text-primary"/>
                                                 <span>{(resource.downloadCount || 0).toLocaleString()}</span>
                                             </div>
-                                            <span className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">{resource.isComingSoon ? 'Leads' : 'Downloads'}</span>
+                                            <span className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">{resource.isComingSoon ? 'Leads' : resource.isOpenDirectly ? 'Views' : 'Downloads'}</span>
                                         </div>
                                         
                                         <div className="flex items-center gap-1">
@@ -738,23 +760,12 @@ export const addLead = async (leadData) => {
                 <p className="text-sm text-gray-500 mb-4 ml-11">Place the entire library on a WordPress page.</p>
                 <div className="ml-11 relative group bg-slate rounded-xl p-5">
                     <button 
-                        onClick={() => handleCopyId(`<iframe id="bp-money-iframe" src="https://financialresourcelibraryv3.vercel.app/" width="100%" height="800px" style="border:none; overflow:hidden;" scrolling="no" title="Financial Resource Library"></iframe>\n<script>\n  window.addEventListener('message', function(event) {\n    if (event.data && event.data.type === 'financial-library-resize' && event.data.height) {\n      var iframe = document.getElementById('bp-money-iframe');\n      if (iframe) iframe.style.height = (parseInt(event.data.height, 10) + 10) + 'px';\n    }\n  });\n</script>`)}
+                        onClick={() => handleCopyId(`<div id="bp-money-library"></div>\n<script src="${window.location.origin}/embed.js"></script>`)}
                         className="absolute top-4 right-4 p-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
                     >
                         <CopyIcon className="w-4 h-4" />
                     </button>
-                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto whitespace-pre-wrap"><code>{`<iframe id="bp-money-iframe" title="Financial Resource Library"
-  src="https://financialresourcelibraryv3.vercel.app/" 
-  width="100%" height="800px" style="border:none; overflow:hidden;" scrolling="no">
-</iframe>
-<script>
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'financial-library-resize' && event.data.height) {
-      var iframe = document.getElementById('bp-money-iframe');
-      if (iframe) iframe.style.height = (parseInt(event.data.height, 10) + 10) + 'px';
-    }
-  });
-</script>`}</code></pre>
+                    <pre className="text-xs text-blue-100 font-mono overflow-x-auto"><code>{`<div id="bp-money-library" style="width:100%"></div>\n<script src="${window.location.origin}/embed.js"></script>`}</code></pre>
                 </div>
               </section>
 
@@ -763,10 +774,10 @@ export const addLead = async (leadData) => {
                   <div className="flex items-center justify-center w-8 h-8 bg-primary text-white font-black rounded-full">2</div>
                   <h3 className="text-lg font-bold text-slate">Single Resource Landing Page</h3>
                 </div>
-                <p className="text-sm text-gray-500 mb-6 ml-11">To embed a single resource, use the same code above but change the <code>src</code> URL to:</p>
+                <p className="text-sm text-gray-500 mb-6 ml-11">Copy a specific <strong>Embed ID</strong> from the Resources tab and use this URL structure in your iframe:</p>
                 <div className="ml-11 p-5 bg-amber-50 rounded-xl border border-amber-200">
                     <code className="text-xs text-amber-900 font-bold break-all">
-                        https://financialresourcelibraryv3.vercel.app/#/embed/[RESOURCE_ID]
+                        {window.location.origin}/#/embed/[RESOURCE_ID]
                     </code>
                 </div>
               </section>
