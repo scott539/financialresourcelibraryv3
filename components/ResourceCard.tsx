@@ -294,11 +294,27 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             )}
           </div>
           
-          <div className="absolute bottom-2.5 right-2.5 bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-xl shadow-lg ring-1 ring-black/10 flex items-center gap-1.5 font-sans tracking-tight">
+          <div
+            data-pill-version="v2-solid"
+            className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 font-sans"
+            style={{
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              fontSize: '10px',
+              fontWeight: 700,
+              padding: '4px 10px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.28)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+              letterSpacing: '-0.01em',
+              lineHeight: 1.4,
+              textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+            }}
+          >
             {isOpenDirectly ? (
-              <EyeIcon className="w-3.5 h-3.5 text-white/95" />
+              <EyeIcon className="w-3.5 h-3.5" />
             ) : (
-              <DownloadIcon className="w-3.5 h-3.5 text-white/95" />
+              <DownloadIcon className="w-3.5 h-3.5" />
             )}
             <span>{(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : isOpenDirectly ? 'Views' : 'Downloads'}</span>
           </div>
