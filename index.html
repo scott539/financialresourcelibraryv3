@@ -68,10 +68,14 @@
 
       /* When loaded as an embed module (html.bp-embed set by the inline script below),
          make the page background fully transparent so the module blends seamlessly into
-         whatever landing page it is embedded on. */
+         whatever landing page it is embedded on, and suppress any internal scrollbar —
+         the parent iframe is sized to fit the full content by embed.js. */
       html.bp-embed,
       html.bp-embed body {
         background: transparent !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
     </style>
     <script>

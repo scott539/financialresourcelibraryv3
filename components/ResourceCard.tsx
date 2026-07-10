@@ -8,6 +8,10 @@ interface ResourceCardProps {
   onDownloadClick: (resource: Resource) => void;
   onGoogleDriveClick: (resource: Resource, e: React.MouseEvent) => void;
   layout?: 'horizontal' | 'vertical';
+  // When true, the card is rendered inside an external embed. The image and title
+  // become inert (no navigation to internal pages); only the download / Drive action
+  // remains interactive. Prevents embeds from opening in-app routes.
+  embed?: boolean;
 }
 
 const formatDate = (timestamp: any): string | null => {
@@ -39,7 +43,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   resource, 
   onDownloadClick, 
   onGoogleDriveClick,
-  layout = 'vertical'
+  layout = 'vertical',
+  embed = false
 }) => {
   const { 
     title, 
@@ -103,11 +108,21 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
   const theme = getTypeTheme();
 
+  // In embed mode, the image and title must not navigate anywhere. MediaWrap renders a
+  // normal <Link> in the app, but a plain (inert) element when embedded — so the only
+  // interactive control left on an embedded card is the download / Drive button.
+  const MediaWrap: React.FC<{ to: string; className?: string; children: React.ReactNode }> = ({ to, className, children }) => {
+    if (embed) {
+      return <div className={className}>{children}</div>;
+    }
+    return <Link to={to} className={className}>{children}</Link>;
+  };
+
   if (layout === 'horizontal') {
     return (
-      <div className="w-full bg-card rounded-3xl border border-line2 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-350 overflow-hidden flex flex-col md:flex-row min-h-[300px]">
+      <div className={`w-full bg-card rounded-3xl border border-line2 shadow-md transition-all duration-350 overflow-hidden flex flex-col md:flex-row min-h-[300px] ${embed ? '' : 'hover:shadow-lg hover:-translate-y-1'}`}>
         {/* Left Side: Featured Image */}
-        <Link 
+        <MediaWrap 
           to={`/preview/${resource.id}`} 
           className="relative md:w-5/12 bg-slate-50 overflow-hidden min-h-[220px] md:min-h-full block cursor-pointer"
         >
@@ -131,7 +146,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               </span>
             )}
           </div>
-        </Link>
+        </MediaWrap>
 
         {/* Right Side: Content Details */}
         <div className="md:w-7/12 p-6 sm:p-8 flex flex-col justify-between">
@@ -161,11 +176,11 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             </div>
 
             {/* Title */}
-            <Link to={`/preview/${resource.id}`} className="block hover:text-primary transition-colors duration-250 mb-3 cursor-pointer">
+            <MediaWrap to={`/preview/${resource.id}`} className="block hover:text-primary transition-colors duration-250 mb-3 cursor-pointer">
               <h3 className="text-xl sm:text-2xl font-serif font-bold text-ink leading-tight">
                 {title}
               </h3>
-            </Link>
+            </MediaWrap>
 
             {/* Description */}
             <p className="text-ink2 text-sm leading-relaxed mb-4">
@@ -252,9 +267,9 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
   return (
     <div className="group h-full flex flex-col">
-      <div className="bg-card rounded-2xl border border-line2 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-line transition-all duration-300 ease-out overflow-hidden h-full flex flex-col">
+      <div className={`bg-card rounded-2xl border border-line2 shadow-sm transition-all duration-300 ease-out overflow-hidden h-full flex flex-col ${embed ? '' : 'hover:shadow-lg hover:-translate-y-1 hover:border-line'}`}>
         {/* Top Image & Badge Container */}
-        <Link 
+        <MediaWrap 
           to={`/preview/${resource.id}`} 
           className="relative overflow-hidden aspect-[16/10] bg-slate-50 border-b border-slate-100/80 block cursor-pointer"
         >
@@ -279,7 +294,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             )}
           </div>
           
-          <div className="absolute bottom-2.5 right-2.5 bg-slate-900/85 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1.5 font-sans tracking-tight">
+          <div className="absolute bottom-2.5 right-2.5 bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-xl shadow-lg ring-1 ring-black/10 flex items-center gap-1.5 font-sans tracking-tight">
             {isOpenDirectly ? (
               <EyeIcon className="w-3.5 h-3.5 text-white/95" />
             ) : (
@@ -287,7 +302,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             )}
             <span>{(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : isOpenDirectly ? 'Views' : 'Downloads'}</span>
           </div>
-        </Link>
+        </MediaWrap>
 
         {/* Content Body */}
         <div className="p-4 sm:p-4.5 flex flex-col flex-grow">
@@ -302,11 +317,11 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             )}
           </div>
 
-          <Link to={`/preview/${resource.id}`} className="block hover:text-primary transition-colors duration-250 mb-1.5 cursor-pointer">
+          <MediaWrap to={`/preview/${resource.id}`} className="block hover:text-primary transition-colors duration-250 mb-1.5 cursor-pointer">
             <h3 className="text-sm sm:text-base font-serif font-semibold text-ink leading-snug tracking-tight line-clamp-2 min-h-[2.5rem]">
               {title}
             </h3>
-          </Link>
+          </MediaWrap>
           
           <div className="flex-grow flex flex-col justify-between">
             <p className="text-ink2 text-[11px] leading-relaxed mb-3 line-clamp-3">

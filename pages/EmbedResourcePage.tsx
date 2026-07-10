@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, useLocation, Navigate } from 'react-router-dom';
 import { Resource, EmbedLayout, DEFAULT_EMBED_LAYOUT } from '../types';
 import ResourceCard from '../components/ResourceCard';
-import DownloadModal from '../components/DownloadModal';
-import { getSubscriberEmail } from '../utils/emailGate';
 import { STATIC_RESOURCES } from '../data/staticResources';
 
 interface EmbedResourcePageProps {
@@ -48,10 +46,6 @@ const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDown
   // Find in state resources first, with fallback to static resources to avoid deep-link routing bails.
   const resource = resources.find(r => r.id === id) || STATIC_RESOURCES.find(r => r.id === id);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalActionType, setModalActionType] = useState<'download' | 'gdrive'>('download');
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-
   if (!resource) {
     if (resources.length === 0) {
       return (
@@ -66,63 +60,30 @@ const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDown
     return <Navigate to="/" />;
   }
 
-  // --- Handlers mirror HomePage exactly so embedded cards behave identically ---
+  // In embeds, the ONLY interactive action is opening/downloading the file.
+  // We do not show the in-app email-capture modal here (it would open an overlay inside
+  // the iframe and defeat the point of a clean, single-action embed). Downloads are still
+  // counted, but the file/Drive link opens directly.
 
   const handleDownloadClick = (res: Resource) => {
-    const email = getSubscriberEmail();
-    if (email) {
-      onDownload(res.id, {
-        firstName: 'Embed User',
-        email,
-        hasConsented: true
-      });
-    } else {
-      if (!res.isComingSoon) {
-        onDownload(res.id, {
-          firstName: 'Anonymous User',
-          email: 'anonymous@subscriber.direct',
-          hasConsented: false
-        }, true);
-      }
-      setModalActionType('download');
-      setSelectedResource(res);
-      setIsModalOpen(true);
-    }
+    // Count the download, then let the browser open the href on the anchor itself.
+    onDownload(res.id, {
+      firstName: 'Embed User',
+      email: 'embed@subscriber.direct',
+      hasConsented: false
+    }, false);
+    // The button is an <a href> pointing at the file/Drive URL, so navigation happens
+    // natively in a new tab; no modal, no in-app routing.
   };
 
   const handleGoogleDriveClick = (res: Resource, e: React.MouseEvent) => {
-    const email = getSubscriberEmail();
-    if (email) {
-      onDownload(res.id, {
-        firstName: 'Embed User',
-        email,
-        hasConsented: true
-      }, false);
-      onGoogleDriveClick(res.id);
-    } else {
-      e.preventDefault();
-      if (res.googleDriveUrl) {
-        window.open(res.googleDriveUrl, '_blank', 'noopener,noreferrer');
-      }
-      onDownload(res.id, {
-        firstName: 'Anonymous User',
-        email: 'anonymous@subscriber.direct',
-        hasConsented: false
-      }, false);
-      onGoogleDriveClick(res.id);
-      setModalActionType('gdrive');
-      setSelectedResource(res);
-      setIsModalOpen(true);
-    }
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setSelectedResource(null);
-  };
-
-  const handleModalDownload = async (resourceId: string, lead: { firstName: string; email: string; hasConsented: boolean; }) => {
-    await onDownload(resourceId, lead, false);
+    // Let the anchor's native href open the Drive link in a new tab; just record the click.
+    onDownload(res.id, {
+      firstName: 'Embed User',
+      email: 'embed@subscriber.direct',
+      hasConsented: false
+    }, false);
+    onGoogleDriveClick(res.id);
   };
 
   // Wide module gets a wider max container; compact stays narrow like a single grid cell.
@@ -136,17 +97,9 @@ const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDown
           onDownloadClick={handleDownloadClick}
           onGoogleDriveClick={handleGoogleDriveClick}
           layout={cardLayout}
+          embed={true}
         />
       </div>
-
-      <DownloadModal
-        resource={selectedResource || resource}
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        onDownload={handleModalDownload}
-        onGoogleDriveClick={onGoogleDriveClick}
-        actionType={modalActionType}
-      />
     </div>
   );
 };

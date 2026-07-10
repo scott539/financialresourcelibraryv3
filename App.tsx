@@ -16,6 +16,7 @@ import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
 import { STATIC_RESOURCES } from './data/staticResources';
+import { AdminIcon } from './components/icons';
 
 const AppContent: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -127,25 +128,66 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (window.self === window.top) return;
-    
+
     let rafId: number;
+    let lastSent = 0;
+
+    const measure = (): number => {
+      // Use the largest of several signals so we never under-report (which is what
+      // causes an internal scrollbar). scrollHeight can round down and can lag behind
+      // content changes, so we also consider the body's rendered bottom edge.
+      const doc = document.documentElement;
+      const body = document.body;
+      const rectBottom = Math.ceil(body.getBoundingClientRect().bottom);
+      return Math.max(
+        doc.scrollHeight,
+        doc.offsetHeight,
+        body ? body.scrollHeight : 0,
+        body ? body.offsetHeight : 0,
+        rectBottom
+      );
+    };
+
     const postHeight = () => {
+      if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        const height = document.documentElement.scrollHeight;
-        window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
+        // Add a tiny buffer so sub-pixel rounding on the host side can't clip the last row.
+        const height = measure() + 2;
+        if (height !== lastSent) {
+          lastSent = height;
+          window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
+        }
       });
     };
 
+    // Observe both documentElement and body so any content growth is caught.
     const observer = new ResizeObserver(postHeight);
     observer.observe(document.documentElement);
+    if (document.body) observer.observe(document.body);
+
     document.addEventListener('transitionend', postHeight);
-    
+    window.addEventListener('load', postHeight);
+    window.addEventListener('resize', postHeight);
+
+    // Re-measure a few times after mount to catch late layout shifts (web fonts,
+    // images decoding, etc.) without needing an event for each.
+    const settleTimers = [100, 300, 600, 1200].map((t) => window.setTimeout(postHeight, t));
+
+    // If any image finishes loading, its natural size may change the card height.
+    const imgs = Array.from(document.images || []);
+    imgs.forEach((img) => {
+      if (!img.complete) img.addEventListener('load', postHeight, { once: true });
+    });
+
     postHeight();
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
       document.removeEventListener('transitionend', postHeight);
+      window.removeEventListener('load', postHeight);
+      window.removeEventListener('resize', postHeight);
+      settleTimers.forEach((id) => clearTimeout(id));
     };
   }, []);
 
@@ -263,9 +305,10 @@ const AppContent: React.FC = () => {
         <Link
           id="admin-public-floating-btn"
           to="/admin"
-          className="fixed top-3 right-4 z-[9999] text-[10px] sm:text-[11px] text-slate-400 hover:text-slate-600 transition-all duration-200 font-semibold tracking-wider uppercase px-2 py-1 select-none opacity-40 hover:opacity-100 cursor-pointer bg-white/20 hover:bg-slate-100/50 rounded"
-          title="Admin Area"
+          className="fixed top-3 right-4 z-[9999] inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-600 hover:text-white font-bold tracking-wider uppercase px-3 py-1.5 select-none cursor-pointer bg-white hover:bg-primary border border-slate-200 hover:border-primary rounded-lg shadow-sm transition-all duration-200"
+          title="Admin Login"
         >
+          <AdminIcon className="w-3.5 h-3.5" />
           Admin
         </Link>
       )}
