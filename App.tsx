@@ -301,15 +301,28 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex flex-col ${isChromeHidden ? 'bg-transparent' : 'min-h-screen bg-paper'}`}>
-      {!showManage && !isChromeHidden && !isEmbedded && (
+      {!showManage && !isEmbedMode && (
         <Link
           id="admin-public-floating-btn"
           to="/admin"
-          className="fixed top-3 right-4 z-[9999] inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-600 hover:text-white font-bold tracking-wider uppercase px-3 py-1.5 select-none cursor-pointer bg-white hover:bg-primary border border-slate-200 hover:border-primary rounded-lg shadow-sm transition-all duration-200"
           title="Admin Login"
+          className="fixed top-3 right-4 z-[9999] inline-flex items-center gap-2 select-none cursor-pointer"
+          style={{
+            backgroundColor: '#0a5c2f',
+            color: '#ffffff',
+            fontSize: '13px',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            padding: '9px 16px',
+            borderRadius: '10px',
+            border: '1px solid rgba(255,255,255,0.25)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+            textDecoration: 'none'
+          }}
         >
-          <AdminIcon className="w-3.5 h-3.5" />
-          Admin
+          <AdminIcon className="w-4 h-4" />
+          Admin Login
         </Link>
       )}
       {showManage && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} showManage={showManage} />}
