@@ -88,25 +88,25 @@ test('direct tool visit, repeat delivery and reload; PFS page and actual file re
   visit('/healthcarecosts/','denied'); await new Promise(setImmediate);
   assert.equal((await read())[healthcare],9482);
   const page = await send(usage,{method:'POST',headers:{origin},body:{path:'/resources-pfs/',eventId:receipt()}});
-  assert.equal(page.code,400); assert.equal((await read())[pfs],0);
+  assert.equal(page.code,400); assert.equal((await read())[pfs],6432);
   const actualFetch=globalThis.fetch;
   const file = {method:'GET',query:{id:pfs,receipt:receipt(),measure:'1'}};
   try {
     globalThis.fetch=fixtureFetch();
     const result = await send(download,file);
     assert.equal(result.code,200); assert.match(result.headers['Content-Disposition'],/attachment/);
-    assert.equal((await read())[pfs],1);
-    await send(download,file); assert.equal((await read())[pfs],1);
+    assert.equal((await read())[pfs],6433);
+    await send(download,file); assert.equal((await read())[pfs],6433);
     await send(copy,{method:'POST',headers:{origin:'https://example.test',host:'example.test'},body:{id:pfs,eventId:receipt()}});
-    assert.equal((await read())[pfs],1);
-    await send(download,{...file,query:{...file.query,measure:'0',receipt:receipt()}}); assert.equal((await read())[pfs],1);
+    assert.equal((await read())[pfs],6433);
+    await send(download,{...file,query:{...file.query,measure:'0',receipt:receipt()}}); assert.equal((await read())[pfs],6433);
     globalThis.fetch=fixtureFetch(true);
     assert.equal((await send(download,{...file,query:{...file.query,receipt:receipt()}})).code,302);
-    assert.equal((await read())[pfs],1);
+    assert.equal((await read())[pfs],6433);
   } finally { globalThis.fetch=actualFetch; }
   const store = ledger(settings()), day=gaDay(new Date(),'America/Denver');
   await store.settle(day,{[healthcare]:5}); await store.settle(day,{[healthcare]:5});
-  assert.equal((await read())[healthcare],9485); assert.equal((await read())[pfs],1);
+  assert.equal((await read())[healthcare],9485); assert.equal((await read())[pfs],6433);
   await store.record(healthcare,receipt(),'views'); assert.equal((await read())[healthcare],9485);
   await store.settle(day,{[healthcare]:0}); assert.equal((await read())[healthcare],9480);
 });
@@ -116,6 +116,52 @@ test('catalog scope, historical aliases and eligibility',() => {
   assert.equal(toolForPath('/healthcare-cost-estimator'),healthcare);
   for(const path of ['/resources/','/pfs/','/resources-pfs/','/retirement-optimizer/','/retirement-simulator/','/wp-content/uploads/bpm-healthcare-estimator.html'])
     assert.equal(toolForPath(path),undefined);
+});
+
+test('all file history survives, overlaps are not added and future deliveries update once', async (t) => {
+  t.mock.timers.enable({apis:['Date'],now:new Date('2026-10-30T23:00:00Z')});
+  const history = JSON.parse(readFileSync(new URL('../data/download-history.json', import.meta.url)));
+  const totals = catalogTotals();
+  let files = 0;
+  for (const [id, resource] of Object.entries(policy.resources)) {
+    if (resource.kind !== 'downloads') continue;
+    files++;
+    assert.equal(resource.legacyBaseline, history.resources[id].count);
+    assert.equal(totals.counts[id], history.resources[id].count);
+  }
+  assert.equal(files, 17);
+  assert.equal(totals.counts[pfs], 6432); // The alias's 1601 actions aren't added again.
+  assert.equal(history.resources['bp-personal-financial-statement'].count, 1601);
+  assert.equal(totals.counts.cVIAlLn6rU7pIay6ge4C, 937); // GA's three may overlap.
+
+  const { downloadUrl } = await import('../utils/downloadRequest.ts');
+  const goal = 'bk9wPWkAao5xzusob9c6';
+  const fileRequest = (consent, preview=false) => ({method:'GET', query:
+    Object.fromEntries(new URL(downloadUrl(goal, consent, preview), origin).searchParams)});
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = fixtureFetch();
+    const before = (await read())[goal];
+    assert.equal(before, 3870);
+    // A normal standalone / embedded request needs no uninstalled WordPress bridge.
+    const first = fileRequest(null);
+    assert.equal((await send(download, first)).code, 200);
+    assert.equal((await read())[goal], before + 1);
+    await send(download, first);
+    assert.equal((await read())[goal], before + 1);
+    await send(download, fileRequest(true));
+    assert.equal((await read())[goal], before + 2);
+    await send(download, fileRequest(false));
+    await send(download, fileRequest(null, true));
+    assert.equal((await read())[goal], before + 2);
+    // A new request keeps working after repeated total reads; history isn't re-added.
+    await read(); await read();
+    await send(download, fileRequest(null));
+    assert.equal((await read())[goal], before + 3);
+    globalThis.fetch = fixtureFetch(true);
+    await send(download, fileRequest(null));
+    assert.equal((await read())[goal], before + 3);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('one mixed catalog ranks the Featured slot, pins and then the larger verified metric', async () => {
@@ -128,8 +174,8 @@ test('one mixed catalog ranks the Featured slot, pins and then the larger verifi
     counts: { [file]: 2, [healthcare]: 10 }, downloads: { [file]: 9600, [healthcare]: 120 },
     views: { [file]: 100, [healthcare]: 4 }
   });
-  assert.equal(counts[file], 9605);
-  assert.equal(rankCounts[file], 9605);
+  assert.equal(counts[file], 10539);
+  assert.equal(rankCounts[file], 10539);
   assert.equal(rankCounts[healthcare], 9494);
   const rank = (items, featured) => rankCatalog([...items], featured, rankCounts).map(r => r.id);
   assert.deepEqual(rank(entries), [pfs, goal, file, healthcare, budget]);

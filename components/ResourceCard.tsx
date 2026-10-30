@@ -1,4 +1,4 @@
-import { useUsage, usageLabel, isTool, directAction } from '../utils/usage';
+import { useUsage, usageLabel, usageDescription, isTool, directAction } from '../utils/usage';
 import { isActiveFeature } from '../utils/catalogOrder';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -168,7 +168,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                   ) : (
                     <DownloadIcon className="w-3.5 h-3.5 text-slate-500" />
                   )}
-                  <span className="font-bold text-slate-800">{metric}</span>
+                  <span title={usageDescription(resource.id)} className="font-bold text-slate-800">{metric}</span>
                 </span>
                 {lastUpdated && (
                   <span className="text-slate-400 border-l border-slate-200 pl-2.5">
@@ -320,7 +320,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             ) : (
               <DownloadIcon className="w-3.5 h-3.5" />
             )}
-            <span>{metric}</span>
+            <span title={usageDescription(resource.id)}>{metric}</span>
           </div>
         </MediaWrap>
 

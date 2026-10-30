@@ -72,7 +72,10 @@ export function catalogTotals(root = {}) {
   for (const [id, resource] of Object.entries(policy.resources)) {
     if (resource.aliasOf) continue;
     // Previous ledger versions recorded only the resource's eligible metric.
-    const prior = (resource.baseline ?? 0) + (root.counts?.[id] ?? 0);
+    // GA download events may overlap the original Firebase counter. Keep the
+    // larger historical total, then add only the separate post-cutover ledger.
+    const historical = Math.max(resource.baseline ?? 0, resource.legacyBaseline ?? 0);
+    const prior = historical + (root.counts?.[id] ?? 0);
     const views = (root.views?.[id] ?? 0) + (resource.kind === 'views' ? prior : 0);
     const downloads = (root.downloads?.[id] ?? 0) + (resource.kind === 'downloads' ? prior : 0);
     counts[id] = resource.kind === 'views' ? views : downloads;
