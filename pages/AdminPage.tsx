@@ -4,6 +4,8 @@ import { Resource, ResourceType, MainCategory, Tag, ALL_TAGS, Lead } from '../ty
 import { UploadIcon, EditIcon, DeleteIcon, DownloadIcon, UsersIcon, EyeIcon, EyeOffIcon, ClockIcon, CopyIcon } from '../components/icons';
 import { UNIFIED_IMAGE_DATA } from '../data/imageData';
 import { storage } from '../firebaseConfig';
+import { isActiveFeature } from '../utils/catalogOrder';
+import { isAlias } from '../utils/usage';
 
 type AdminTab = 'manage' | 'integrations' | 'embed' | 'settings';
 
@@ -131,7 +133,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
             liveDateString = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
         
-        return { ...data, tags: data.tags || [], liveDate: liveDateString };
+        return { ...data, isFeatured: isActiveFeature(data), tags: data.tags || [], liveDate: liveDateString };
     });
     const [resourceFile, setResourceFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -181,21 +183,18 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
         setSubmitError('');
         
         try {
-            const featuredCount = resources.filter(r => 
-                r.isFeatured && 
-                (!r.featuredUntil || new Date(r.featuredUntil) > new Date()) &&
-                (isEditing ? r.id !== (initialData as Resource).id : true)
-            ).length;
-
-            if (formData.isFeatured && featuredCount >= 2) {
-                throw new Error("Only two resources can be featured at a time. Please un-feature another resource first.");
+            const wasActive = initialData && !initialData.isHidden && isActiveFeature(initialData);
+            if (formData.isFeatured && !formData.isHidden && !wasActive) {
+                const current = resources.find(r => !r.isHidden && !isAlias(r.id) && isActiveFeature(r) &&
+                    (!isEditing || r.id !== (initialData as Resource).id));
+                if (current) throw new Error('Remove the Featured flag from “' + current.title + '” before featuring another resource.');
             }
 
             const dataToSubmit = { 
                 ...formData, 
                 isComingSoon: isEffectivelyComingSoon,
                 featuredUntil: formData.isFeatured 
-                    ? (formData.featuredUntil || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()) 
+                    ? (wasActive ? formData.featuredUntil ?? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
                     : null
             };
             await onSubmit(dataToSubmit, resourceFile || undefined);
@@ -351,7 +350,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                             />
                             <div className="flex flex-col">
                                 <span className="font-medium text-gray-700">Feature this resource</span>
-                                <span className="text-[10px] text-gray-500 italic">Appears at the top of the library for 7 days. Max 2 featured.</span>
+                                <span className="text-[10px] text-gray-500 italic">One Featured resource can appear above the two pinned documents for seven days.</span>
                             </div>
                         </label>
                     </div>

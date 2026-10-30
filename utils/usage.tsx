@@ -6,7 +6,7 @@ export const canonicalId = (id: string) => rules[id]?.aliasOf || id;
 export const isTool = (id: string) => rules[id]?.kind === 'views';
 export const isFile = (id: string) => rules[canonicalId(id)]?.kind === 'downloads';
 export const isAlias = (id: string) => Boolean(rules[id]?.aliasOf);
-type Counts = { counts: Record<string, number>; live: boolean; since: string | null };
+type Counts = { counts: Record<string, number>; rankCounts?: Record<string, number>; live: boolean; since: string | null };
 const initial: Counts = { counts: Object.fromEntries(Object.entries(rules).map(([id,p]) => [id,p.baseline || 0])), live:false, since:null };
 const Usage = createContext(initial);
 export const useUsage = () => useContext(Usage);

@@ -44,7 +44,7 @@ Object.assign(process.env, { BPM_GCP_WIF_PROVIDER:'projects/272224588349/locatio
 const { default: usage } = await import('../api/usage.js');
 const { default: download } = await import('../api/download.js');
 const { default: copy } = await import('../api/copy.js');
-const { ledger,settings } = await import('../server/ledger.js');
+const { ledger, settings, catalogTotals } = await import('../server/ledger.js');
 const { toolForPath, gaDay, policy } = await import('../server/policy.js');
 const healthcare = 'bp-healthcare-costs-estimator', pfs = '0y425w6qfHCnOnTfd0JC';
 const src = readFileSync(new URL('../public/tool-pageview.js',import.meta.url),'utf8');
@@ -116,6 +116,38 @@ test('catalog scope, historical aliases and eligibility',() => {
   assert.equal(toolForPath('/healthcare-cost-estimator'),healthcare);
   for(const path of ['/resources/','/pfs/','/resources-pfs/','/retirement-optimizer/','/retirement-simulator/','/wp-content/uploads/bpm-healthcare-estimator.html'])
     assert.equal(toolForPath(path),undefined);
+});
+
+test('one mixed catalog ranks the Featured slot, pins and then the larger verified metric', async () => {
+  const { rankCatalog, selectFeaturedResource } = await import('../utils/catalogOrder.ts');
+  const goal = 'bk9wPWkAao5xzusob9c6', file = 'cVIAlLn6rU7pIay6ge4C', budget = 'bp-budget-template-tracker';
+  const entries = [file, goal, healthcare, pfs, budget].map(id => ({
+    resource: { id, title: policy.resources[id].title }, score: 0
+  }));
+  const { counts, rankCounts } = catalogTotals({
+    counts: { [file]: 2, [healthcare]: 10 }, downloads: { [file]: 9600, [healthcare]: 120 },
+    views: { [file]: 100, [healthcare]: 4 }
+  });
+  assert.equal(counts[file], 9605);
+  assert.equal(rankCounts[file], 9605);
+  assert.equal(rankCounts[healthcare], 9494);
+  const rank = (items, featured) => rankCatalog([...items], featured, rankCounts).map(r => r.id);
+  assert.deepEqual(rank(entries), [pfs, goal, file, healthcare, budget]);
+  assert.deepEqual(rank(entries, budget), [budget, pfs, goal, file, healthcare]);
+  assert.deepEqual(rank(entries, goal), [goal, pfs, file, healthcare, budget]);
+  assert.deepEqual(rank(entries.filter(m => m.resource.id === healthcare)), [healthcare]);
+  assert.deepEqual(rank(entries.filter(m => m.resource.id !== pfs), budget), [budget, goal, file, healthcare]);
+  const baseline = catalogTotals().rankCounts;
+  assert.deepEqual(rankCatalog([...entries], undefined, baseline).map(r => r.id), [pfs, goal, healthcare, budget, file]);
+  const now = Date.parse('2026-10-30T12:00:00Z');
+  const flagged = [
+    { id: goal, isFeatured: true, featuredUntil: '2026-11-01' },
+    { id: budget, isFeatured: true, featuredUntil: '2026-11-02' },
+    { id: healthcare, isFeatured: true, featuredUntil: '2026-10-29' },
+    { id: file, isFeatured: true, isHidden: true }
+  ];
+  assert.equal(selectFeaturedResource(flagged, now)?.id, budget);
+  assert.equal(selectFeaturedResource(flagged, Date.parse('2026-11-02')), undefined);
 });
 
 

@@ -1,4 +1,5 @@
 import { useUsage, usageLabel, isTool, directAction } from '../utils/usage';
+import { isActiveFeature } from '../utils/catalogOrder';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -9,6 +10,7 @@ interface ResourceCardProps {
   onDownloadClick: (resource: Resource) => void;
   onGoogleDriveClick: (resource: Resource, e: React.MouseEvent) => void;
   layout?: 'horizontal' | 'vertical';
+  featured?: boolean;
   // When true, the card is rendered inside an external embed. The image and title
   // become inert (no navigation to internal pages); only the download / Drive action
   // remains interactive. Prevents embeds from opening in-app routes.
@@ -45,6 +47,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   onDownloadClick, 
   onGoogleDriveClick,
   layout = 'vertical',
+  featured = isActiveFeature(resource),
   embed = false
 }) => {
   const { 
@@ -136,7 +139,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-black/5 pointer-events-none" />
           
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+            {featured && (
               <span className="bg-primary px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-md backdrop-blur-sm">
                 Featured Tool
               </span>
@@ -283,7 +286,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5 pointer-events-none" />
           
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
-            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+            {featured && (
               <span className="bg-primary/95 backdrop-blur-md text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
                 Featured
               </span>

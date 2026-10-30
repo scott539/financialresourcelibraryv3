@@ -1,8 +1,10 @@
 # Resource usage release
 
-The 23-record mapping is in [usage-policy.json](../data/usage-policy.json). Five tools have verified website page views through October 29, 2026. Seventeen file resources share the downloads section. The remaining record is an old PFS alias. Both preview and embed URLs for it resolve to the spreadsheet that the published WordPress PFS page already embeds. The app keeps legacy database counts separate from these public statistics. The retired simulator and optimizer have no mapping here.
+The 23-record mapping is in [usage-policy.json](../data/usage-policy.json). Five tools have verified website page views through October 29, 2026. Seventeen resources are tracked by file downloads. The remaining record is an old PFS alias. Both preview and embed URLs for it resolve to the spreadsheet that the published WordPress PFS page already embeds. The app keeps legacy catalog access counts separate from these public statistics. The retired simulator and optimizer have no mapping here.
 
-The Money Date PDF has three verified historical GA4 download events. The other files have no verified historical total. A Google copy dialog has its own private event and cannot increase a download total. Rankings freeze between changes to the search and filters. Both sections remain searchable together.
+The library displays a single list. One active Featured resource can take the first position, followed by the Personal Financial Statement and the Vision/Goal Setting Template. Each appears once. Remaining matches rank by the higher of verified downloads and eligible tool page views. A search or filter removes nonmatching cards, including pins. Popularity rankings freeze between changes to the search and filters.
+
+The Money Date PDF has three verified historical GA4 download events. The other files have no verified historical total. Visiting a document landing page or opening a Google copy dialog does not count as a download.
 
 ## Production prerequisites
 

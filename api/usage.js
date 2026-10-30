@@ -1,5 +1,5 @@
 import { withVercelIdentity } from '../server/google-identity.js';
-import { baselineCounts, ledger, settings } from '../server/ledger.js';
+import { catalogTotals, ledger, settings } from '../server/ledger.js';
 import { isUUID, publicHosts, toolForPath } from '../server/policy.js';
 
 async function handler(req, res) {
@@ -8,12 +8,12 @@ async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
     try {
       if (config) {
-        const counts = await ledger(config).totals();
+        const totals = await ledger(config).totals();
         res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=3');
-        return res.json({ counts, since: config.start, live: true });
+        return res.json({ ...totals, since: config.start, live: true });
       }
     } catch { /* Always retain the verified baseline if the counter store is offline. */ }
-    return res.json({ counts: baselineCounts(), since: null, live: false });
+    return res.json({ ...catalogTotals(), since: null, live: false });
   }
   const origin = req.headers.origin;
   if (!publicHosts.some(h => origin === 'https://' + h)) return res.status(403).end();

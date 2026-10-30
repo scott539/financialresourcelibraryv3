@@ -41,7 +41,7 @@ export function ledger(config) {
         tx.set(bucket, { [kind]: { [id]: FieldValue.increment(1) } }, { merge: true });
         const alreadySettled = kind === 'views' && current.data()?.settledViews;
         if (kind !== 'copyOpens' && !alreadySettled) {
-          tx.set(root, { counts: { [id]: FieldValue.increment(1) } }, { merge: true });
+          tx.set(root, { [kind]: { [id]: FieldValue.increment(1) } }, { merge: true });
         }
       });
     },
@@ -58,18 +58,25 @@ export function ledger(config) {
           if (diff) changes[id] = FieldValue.increment(diff);
         }
         tx.set(bucket, { settledViews: values }, { mergeFields: ['settledViews'] });
-        if (Object.keys(changes).length) tx.set(root, { counts: changes }, { merge: true });
+        if (Object.keys(changes).length) tx.set(root, { views: changes }, { merge: true });
       });
     },
     async totals() {
-      const totals = baselineCounts();
-      const deltas = (await root.get()).data()?.counts || {};
-      for (const id of Object.keys(totals)) totals[id] += deltas[id] || 0;
-      return totals;
+      return catalogTotals((await root.get()).data());
     }
   };
 }
-export function baselineCounts() {
-  return Object.fromEntries(Object.entries(policy.resources).filter(([, p]) => !p.aliasOf)
-    .map(([id, p]) => [id, p.baseline || 0]));
+export function catalogTotals(root = {}) {
+  const counts = {};
+  const rankCounts = {};
+  for (const [id, resource] of Object.entries(policy.resources)) {
+    if (resource.aliasOf) continue;
+    // Previous ledger versions recorded only the resource's eligible metric.
+    const prior = (resource.baseline ?? 0) + (root.counts?.[id] ?? 0);
+    const views = (root.views?.[id] ?? 0) + (resource.kind === 'views' ? prior : 0);
+    const downloads = (root.downloads?.[id] ?? 0) + (resource.kind === 'downloads' ? prior : 0);
+    counts[id] = resource.kind === 'views' ? views : downloads;
+    rankCounts[id] = Math.max(views, downloads);
+  }
+  return { counts, rankCounts };
 }

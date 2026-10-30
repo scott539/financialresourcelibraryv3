@@ -1,6 +1,6 @@
-import { isAlias, isTool, useUsage } from '../utils/usage';
-import React, { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { isAlias, useUsage } from '../utils/usage';
+import { rankCatalog, selectFeaturedResource } from '../utils/catalogOrder';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
@@ -17,7 +17,6 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriveClick, showManage }) => {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
   const [activeTags, setActiveTags] = useState<Tag[]>([]);
@@ -29,8 +28,9 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
 
   const usage = useUsage();
   const rankKey = JSON.stringify([searchTerm, activeCategory, activeTags, usage.live]);
-  const ranks = useRef({ key: rankKey, counts: usage.counts });
-  if (ranks.current.key !== rankKey) ranks.current = { key: rankKey, counts: usage.counts };
+  const scores = usage.rankCounts ?? usage.counts;
+  const ranks = useRef({ key: rankKey, counts: scores });
+  if (ranks.current.key !== rankKey) ranks.current = { key: rankKey, counts: scores };
   const rankCounts = ranks.current.counts;
 
   // Filter out hidden/future items first
@@ -45,9 +45,20 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
     });
   }, [resources, showManage]);
 
+  const [featureCheck, checkFeature] = useState(Date.now);
+  const featured = selectFeaturedResource(visibleResources);
+  const featuredId = featured?.id;
+  const featuredUntil = featured?.featuredUntil;
+  useEffect(() => {
+    if (!featuredUntil) return;
+    const delay = Math.min(Math.max(0, Date.parse(featuredUntil) - Date.now()), 2147483647);
+    const timer = window.setTimeout(() => checkFeature(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [featuredUntil, featureCheck]);
+
   // Unified filter engine matching title, description, tags, type, or category with smart relevancy scoring
   const filteredResources = useMemo(() => {
-    return visibleResources
+    const matches = visibleResources
       .map(resource => {
         let score = 0;
         const query = searchTerm.toLowerCase().trim();
@@ -165,32 +176,14 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
           : true;
 
         return matchesCategory && matchesTags;
-      })
-      .sort((a, b) => {
-        // Sort by smart relevancy score first if active search
-        if (searchTerm) {
-          if (b.score !== a.score) {
-            return b.score - a.score;
-          }
-        }
-
-        if (isTool(a.resource.id) !== isTool(b.resource.id)) return isTool(a.resource.id) ? -1 : 1;
-        return ((rankCounts[b.resource.id] || 0) - (rankCounts[a.resource.id] || 0)) ||
-          a.resource.title.localeCompare(b.resource.title);
-
-      })
-      .map(({ resource }) => resource);
-  }, [visibleResources, searchTerm, activeCategory, activeTags, rankCounts]);
+      });
+    return rankCatalog(matches, featuredId, rankCounts);
+  }, [visibleResources, searchTerm, activeCategory, activeTags, featuredId, rankCounts]);
 
   // Determine if filters are active
   const hasActiveFilters = useMemo(() => {
     return !!(searchTerm || activeCategory || activeTags.length > 0);
   }, [searchTerm, activeCategory, activeTags]);
-
-  const groups = searchTerm.trim() ? [{ title: '', items: filteredResources }] : [
-    { title: 'Web tools', items: filteredResources.filter(r => isTool(r.id)) },
-    { title: 'Downloads and templates', items: filteredResources.filter(r => !isTool(r.id)) }
-  ];
 
   const handleTagToggle = (tag: Tag) => {
     setActiveTags(prev => 
@@ -349,21 +342,19 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
               </div>
 
               {/* Grid Layout - Compact 4-Column on Desktop */}
-              {filteredResources.length > 0 ? groups.filter(g => g.items.length).map(group => (
-                <section key={group.title} className="mb-6">
-                  {group.title && <h2 className="mb-2 text-lg font-semibold text-forest">{group.title}</h2>}
+              {filteredResources.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 auto-rows-fr">
-                  {group.items.map((resource) => (
+                  {filteredResources.map((resource) => (
                     <ResourceCard 
                       key={resource.id} 
                       resource={resource} 
+                      featured={resource.id === featuredId}
                       onDownloadClick={handleDownloadClick} 
                       onGoogleDriveClick={handleGoogleDriveClick} 
                     />
                   ))}
                 </div>
-                </section>
-              )) : (
+              ) : (
                 <div className="text-center py-20 bg-card border border-line2 rounded-3xl shadow-md max-w-md mx-auto p-8">
                   <div className="h-16 w-16 rounded-2xl bg-paper border border-line flex items-center justify-center mx-auto mb-5 text-ink2 shadow-inner font-mono text-xl font-bold">
                     ?
