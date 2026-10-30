@@ -1,7 +1,8 @@
+import { withVercelIdentity } from '../server/google-identity.js';
 import { isUUID, policy } from '../server/policy.js';
 import { ledger, settings } from '../server/ledger.js';
 
-export default async function handler(req,res) {
+async function handler(req,res) {
   if (req.method !== 'POST') return res.status(405).end();
   if (req.headers.origin !== 'https://' + req.headers.host) return res.status(403).end();
   const {id,eventId} = req.body || {};
@@ -11,3 +12,5 @@ export default async function handler(req,res) {
   await ledger(config).record(id,eventId,'copyOpens');
   return res.status(204).end();
 }
+
+export default withVercelIdentity(handler);

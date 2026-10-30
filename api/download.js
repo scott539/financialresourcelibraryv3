@@ -1,8 +1,9 @@
+import { withVercelIdentity } from '../server/google-identity.js';
 import { isUUID } from '../server/policy.js';
 import { ledger, settings } from '../server/ledger.js';
 import { sourceFile, verifiedFile } from '../server/files.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store');
   if (req.method !== 'GET') return res.status(405).end();
   const { id, receipt, measure, source } = req.query;
@@ -21,3 +22,5 @@ export default async function handler(req, res) {
   res.setHeader('Content-Disposition', 'attachment; filename="' + name + '"');
   return res.status(200).send(data.bytes);
 }
+
+export default withVercelIdentity(handler);

@@ -1,22 +1,22 @@
 // The dedicated database contains counts and anonymous receipt IDs only.
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, Firestore } from '@google-cloud/firestore';
+import { GoogleAuth } from 'google-auth-library';
+import { googleClient, projectId } from './google-identity.js';
 import { firstDay, gaDay, policy, tools } from './policy.js';
 
 export function settings() {
-  const { BPM_METRICS_GOOGLE_JSON, BPM_METRICS_DATABASE, BPM_GA_TIMEZONE, BPM_DOWNLOAD_START } = process.env;
-  if (!BPM_METRICS_GOOGLE_JSON || !BPM_GA_TIMEZONE || !BPM_METRICS_DATABASE ||
-      BPM_METRICS_DATABASE === '(default)' || !/^\d{4}-\d{2}-\d{2}$/.test(BPM_DOWNLOAD_START || '')) return null;
-  // Preview and production never share data, even when using the same service identity.
-  return { credential: JSON.parse(BPM_METRICS_GOOGLE_JSON), database: BPM_METRICS_DATABASE,
-    zone: BPM_GA_TIMEZONE, start: BPM_DOWNLOAD_START,
-    collection: process.env.VERCEL_ENV === 'production' ? 'publishedMetrics' : 'previewMetrics' };
+  const { BPM_GCP_WIF_PROVIDER: provider, BPM_METRICS_DATABASE: database, BPM_GA_TIMEZONE: zone, BPM_DOWNLOAD_START: start } = process.env;
+  if (process.env.VERCEL_ENV !== 'production' || database !== 'bpm-resource-metrics' || !zone ||
+      !/^projects\/\d+\/locations\/global\/workloadIdentityPools\/[a-z0-9-]+\/providers\/[a-z0-9-]+$/.test(provider || '') ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(start || '')) return null;
+  return { provider, database, zone, start };
 }
 
+let db;
 export function ledger(config) {
-  const app = getApps().find(a => a.name === 'usage') || initializeApp({ credential: cert(config.credential) }, 'usage');
-  const db = getFirestore(app, config.database);
-  const root = db.collection(config.collection).doc('library');
+  db ??= new Firestore({ projectId, databaseId: config.database,
+    auth: new GoogleAuth({ projectId, authClient: googleClient(config.provider, 'https://www.googleapis.com/auth/datastore') }) });
+  const root = db.collection('publishedMetrics').doc('library');
   const days = root.collection('days');
   const receipts = root.collection('receipts');
   return {

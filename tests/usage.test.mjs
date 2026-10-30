@@ -33,14 +33,14 @@ globalThis.testFirestore = {
   }
 };
 const mocks = {
-  'firebase-admin/app': 'export const cert=x=>x, getApps=()=>[], initializeApp=()=>({});',
-  'firebase-admin/firestore':'export const getFirestore=()=>globalThis.testFirestore, FieldValue={increment:by=>({by})};'
+  '@google-cloud/firestore': 'export class Firestore {constructor(options){globalThis.testDbOptions=options;return globalThis.testFirestore;}}; export const FieldValue={increment:by=>({by})};',
+  'google-auth-library':'export class IdentityPoolClient {constructor(options){this.options=options;}}; export class GoogleAuth {constructor(options){this.options=options;}};'
 };
 registerHooks({resolve(spec,ctx,next) {
   return mocks[spec] ? {url:'data:text/javascript,'+encodeURIComponent(mocks[spec]),shortCircuit:true} : next(spec,ctx);
 }});
-Object.assign(process.env, { BPM_METRICS_GOOGLE_JSON:'{}', BPM_METRICS_DATABASE:'usage-test',
-  BPM_GA_TIMEZONE:'America/Denver', BPM_DOWNLOAD_START:'2026-10-30', VERCEL_ENV:'preview' });
+Object.assign(process.env, { BPM_GCP_WIF_PROVIDER:'projects/272224588349/locations/global/workloadIdentityPools/bpm-vercel/providers/vercel', BPM_METRICS_DATABASE:'bpm-resource-metrics',
+  BPM_GA_TIMEZONE:'America/Denver', BPM_DOWNLOAD_START:'2026-10-30', VERCEL_ENV:'production' });
 const { default: usage } = await import('../api/usage.js');
 const { default: download } = await import('../api/download.js');
 const { default: copy } = await import('../api/copy.js');
@@ -116,4 +116,28 @@ test('catalog scope, historical aliases and eligibility',() => {
   assert.equal(toolForPath('/healthcare-cost-estimator'),healthcare);
   for(const path of ['/resources/','/pfs/','/resources-pfs/','/retirement-optimizer/','/retirement-simulator/','/wp-content/uploads/bpm-healthcare-estimator.html'])
     assert.equal(toolForPath(path),undefined);
+});
+
+
+test('federated identity is request-scoped, cannot use a JSON key, and keeps previews offline', async () => {
+  const { withVercelIdentity, googleClient } = await import('../server/google-identity.js');
+  const config = settings();
+  const options = googleClient(config.provider, 'https://www.googleapis.com/auth/analytics.readonly').options;
+  assert.equal(options.audience, '//iam.googleapis.com/' + config.provider);
+  assert.match(options.service_account_impersonation_url, /bpm-library-metrics@bp-money-resources\.iam\.gserviceaccount\.com:generateAccessToken$/);
+  assert.deepEqual(options.scopes, ['https://www.googleapis.com/auth/analytics.readonly']);
+  const supplier = options.subject_token_supplier;
+  const getToken = withVercelIdentity(async () => { await new Promise(setImmediate); return supplier.getSubjectToken(); });
+  const token = value => getToken({headers:{'x-vercel-oidc-token':value}});
+  assert.deepEqual(await Promise.all([token('request-a'),token('request-b')]), ['request-a','request-b']);
+  await assert.rejects(getToken({headers:{authorization:'Bearer unrelated'}}), /identity unavailable/);
+  assert.equal(globalThis.testDbOptions.databaseId, 'bpm-resource-metrics');
+  assert.deepEqual(globalThis.testDbOptions.auth.options.authClient.options.scopes, ['https://www.googleapis.com/auth/datastore']);
+  try {
+    process.env.VERCEL_ENV='preview';
+    assert.equal(settings(), null);
+    const baseline = await send(usage,{method:'GET',headers:{}});
+    assert.equal(baseline.body.live, false);
+    assert.equal(baseline.body.counts[healthcare],9480);
+  } finally { process.env.VERCEL_ENV='production'; }
 });

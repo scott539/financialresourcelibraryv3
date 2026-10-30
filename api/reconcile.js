@@ -1,11 +1,11 @@
+import { withVercelIdentity, googleClient } from '../server/google-identity.js';
 // A complete GA day replaces its provisional views. Re-reading the window also
 // picks up late events, restores missed jobs and safely backfills from Oct 30.
-import { GoogleAuth } from 'google-auth-library';
 import { timingSafeEqual } from 'node:crypto';
 import { firstDay, gaDay, publicHosts, toolForPath, tools } from '../server/policy.js';
 import { ledger, settings } from '../server/ledger.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const expected = Buffer.from('Bearer ' + (process.env.CRON_SECRET || ''));
   const provided = Buffer.from(req.headers.authorization || '');
   if (req.method !== 'GET' || !process.env.CRON_SECRET || expected.length !== provided.length ||
@@ -20,8 +20,7 @@ export default async function handler(req, res) {
   const startDate = cursor && shift(cursor,-3) > firstDay ? shift(cursor,-3) : firstDay;
   const endDate = shift(startDate,27) < yesterday ? shift(startDate,27) : yesterday;
   if (endDate < startDate) return res.json({ days: 0 });
-  const auth = new GoogleAuth({ credentials: config.credential, scopes: ['https://www.googleapis.com/auth/analytics.readonly'] });
-  const client = await auth.getClient();
+  const client = googleClient(config.provider, 'https://www.googleapis.com/auth/analytics.readonly');
   const days = new Map();
   for (let day = Date.parse(startDate); day <= Date.parse(endDate); day += 86400000) {
     days.set(new Date(day).toISOString().slice(0,10), Object.fromEntries(tools.map(([id]) => [id, 0])));
@@ -54,3 +53,5 @@ export default async function handler(req, res) {
   await store.markSettled(endDate);
   res.json({ days: days.size, through: endDate });
 }
+
+export default withVercelIdentity(handler);

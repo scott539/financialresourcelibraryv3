@@ -1,7 +1,8 @@
+import { withVercelIdentity } from '../server/google-identity.js';
 import { baselineCounts, ledger, settings } from '../server/ledger.js';
 import { isUUID, publicHosts, toolForPath } from '../server/policy.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const config = settings();
   if (req.method === 'GET') {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -31,3 +32,5 @@ export default async function handler(req, res) {
   await ledger(config).record(id, eventId, 'views');
   return res.status(204).end();
 }
+
+export default withVercelIdentity(handler);
