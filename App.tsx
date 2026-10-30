@@ -301,30 +301,6 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex flex-col ${isChromeHidden ? 'bg-transparent' : 'min-h-screen bg-paper'}`}>
-      {!showManage && !isEmbedMode && (
-        <Link
-          id="admin-public-floating-btn"
-          to="/admin"
-          title="Admin Login"
-          className="fixed top-3 right-4 z-[9999] inline-flex items-center gap-2 select-none cursor-pointer"
-          style={{
-            backgroundColor: '#0a5c2f',
-            color: '#ffffff',
-            fontSize: '13px',
-            fontWeight: 800,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            padding: '9px 16px',
-            borderRadius: '10px',
-            border: '1px solid rgba(255,255,255,0.25)',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-            textDecoration: 'none'
-          }}
-        >
-          <AdminIcon className="w-4 h-4" />
-          Admin Login
-        </Link>
-      )}
       {showManage && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} showManage={showManage} />}
 
       <main className={`flex-grow ${!isChromeHidden ? 'pb-16 md:pb-0' : ''}`}>
@@ -355,6 +331,32 @@ const AppContent: React.FC = () => {
         </Routes>
       </main>
       
+      {!showManage && !isEmbedMode && (
+        <Link
+          id="admin-public-floating-btn"
+          to="/admin"
+          title="Admin Login"
+          className={`inline-flex items-center gap-2 select-none cursor-pointer ${
+            isChromeHidden ? 'self-end mr-4 mb-3' : 'fixed right-4 bottom-20 md:bottom-3 z-40'
+          }`}
+          style={{
+            backgroundColor: '#0a5c2f',
+            color: '#ffffff',
+            fontSize: '13px',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            padding: '9px 16px',
+            borderRadius: '10px',
+            border: '1px solid rgba(255,255,255,0.25)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+            textDecoration: 'none'
+          }}
+        >
+          <AdminIcon className="w-4 h-4" />
+          Admin Login
+        </Link>
+      )}
       {!isChromeHidden && <Footer showManage={showManage} />}
       {!isChromeHidden && <BottomNav isAuthenticated={isAuthenticated} onLogout={handleLogout} showManage={showManage} />}
     </div>
