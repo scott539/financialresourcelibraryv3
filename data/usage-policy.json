@@ -3,11 +3,13 @@
   "resources": {
     "0y425w6qfHCnOnTfd0JC": {
       "title": "Personal Financial Statement (PFS) for FI/RE",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 6432
     },
     "bk9wPWkAao5xzusob9c6": {
       "title": "BP Money Vision/Goal Setting Template",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 3870
     },
     "bp-healthcare-costs-estimator": {
       "title": "Healthcare Cost Projection",
@@ -20,7 +22,8 @@
     },
     "L26iS881ZhPUIqSWTaRc": {
       "title": "\"DEWK\" (Dually Employed With Kids) Financial Plan Template",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 2194
     },
     "bp-personal-financial-statement": {
       "title": "Personal Financial Statement (PFS) for FIRE",
@@ -28,15 +31,18 @@
     },
     "3hadxK8aXA6TLQJQVq90": {
       "title": "Money Moves Year-End Checklist",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 1369
     },
     "twaRw8Dh7USwpcJ56bcW": {
       "title": "The Ultimate Guide to Decumulation (2026)",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 1213
     },
     "5xMBrAQfaeg217N05xkn": {
       "title": "A Projection Model to Accompany the \"DEWK\" Financial Plan Template",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 1171
     },
     "bp-income-tax-projection": {
       "title": "Income Tax Projection",
@@ -52,11 +58,13 @@
       "title": "BPM Money Date Template",
       "kind": "downloads",
       "baseline": 3,
-      "evidence": "GA4 file_download events for the Money Date Template PDF through 2026-10-29"
+      "evidence": "GA4 file_download events for the Money Date Template PDF through 2026-10-29",
+      "legacyBaseline": 937
     },
     "SPW9zrqKWvGhO1LVhXHJ": {
       "title": "Withdrawal Frameworks Presentation",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 749
     },
     "bp-mortgage-payoff-calculator": {
       "title": "Mortgage Payoff vs. Invest",
@@ -80,15 +88,18 @@
     },
     "MnGCiEFCmbax75HQy20L": {
       "title": "The Middle Class Family: The Financial Stability Framework",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 579
     },
     "jOu2yJcNGXF5azlRgsHO": {
       "title": "The CEO Toolkit",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 452
     },
     "OTFTrNb2Md3gx2Co1scn": {
       "title": "Alternatives to Sequential Drawdown PPT Deck",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 439
     },
     "bp-mega-backdoor-roth-guide": {
       "title": "Mega-Cap Valuation Workbook",
@@ -100,27 +111,34 @@
     },
     "RCd5VgmhvauAC2fnRTmy": {
       "title": "Investor Policy Statement Template",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 236
     },
     "QnASLbFPLE48vS6UZqsH": {
       "title": "Bitcoin's Binary Endgame (PDF)",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 234
     },
     "OokxZVP3ro51xBkSrU5p": {
       "title": "UPDATED for 2026 Year End Money Moves Checklist",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 113
     },
     "ATwLvSY3GxfhKaT0OXDB": {
       "title": "The Bucket List Builder",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 96
     },
     "fm5CSMlk66LR3Tgk6xdB": {
       "title": "Forgotten Expenses Checklist",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 74
     },
     "u1y3YGtNeKLhuzBWX3GG": {
       "title": "Roth Conversion Window Worksheet",
-      "kind": "downloads"
+      "kind": "downloads",
+      "legacyBaseline": 19
     }
-  }
+  },
+  "legacyCapturedAt": "2026-10-30T23:46:42.466949+00:00"
 }

@@ -1,0 +1,122 @@
+{
+  "capturedAt": "2026-10-30T23:46:42.466949+00:00",
+  "source": "bp-money-resources/(default)/resources.downloadCount",
+  "definition": "Legacy download and open actions; not verified completed transfers. Preserved unchanged.",
+  "resources": {
+    "0y425w6qfHCnOnTfd0JC": {
+      "title": "Personal Financial Statement (PFS) for FI/RE",
+      "count": 6432,
+      "updatedAt": "2026-10-30T19:52:37.091365Z"
+    },
+    "3hadxK8aXA6TLQJQVq90": {
+      "title": "Money Moves Year-End Checklist",
+      "count": 1369,
+      "updatedAt": "2026-10-29T21:17:51.087663Z"
+    },
+    "5xMBrAQfaeg217N05xkn": {
+      "title": "A Projection Model to Accompany the \"DEWK\" Financial Plan Template",
+      "count": 1171,
+      "updatedAt": "2026-10-27T22:01:29.221392Z"
+    },
+    "ATwLvSY3GxfhKaT0OXDB": {
+      "title": "The Bucket List Builder",
+      "count": 96,
+      "updatedAt": "2026-10-29T20:01:05.805152Z"
+    },
+    "L26iS881ZhPUIqSWTaRc": {
+      "title": "\"DEWK\" (Dually Employed With Kids) Financial Plan Template",
+      "count": 2194,
+      "updatedAt": "2026-10-30T12:45:51.031095Z"
+    },
+    "MnGCiEFCmbax75HQy20L": {
+      "title": "The Middle Class Family: The Financial Stability Framework",
+      "count": 579,
+      "updatedAt": "2026-10-30T20:08:39.297925Z"
+    },
+    "OTFTrNb2Md3gx2Co1scn": {
+      "title": "Alternatives to Sequential Drawdown PPT Deck",
+      "count": 439,
+      "updatedAt": "2026-10-21T19:29:06.256314Z"
+    },
+    "OokxZVP3ro51xBkSrU5p": {
+      "title": "UPDATED for 2026 Year End Money Moves Checklist",
+      "count": 113,
+      "updatedAt": "2026-10-30T11:52:55.378328Z"
+    },
+    "QnASLbFPLE48vS6UZqsH": {
+      "title": "Bitcon's Binary Endgame (PDF)",
+      "count": 234,
+      "updatedAt": "2026-10-14T18:58:07.736091Z"
+    },
+    "RCd5VgmhvauAC2fnRTmy": {
+      "title": "Investor Policy Statement Template",
+      "count": 236,
+      "updatedAt": "2026-10-30T15:06:41.673860Z"
+    },
+    "SPW9zrqKWvGhO1LVhXHJ": {
+      "title": "Withdrawal Frameworks Presentation",
+      "count": 749,
+      "updatedAt": "2026-10-29T21:32:14.713099Z"
+    },
+    "bk9wPWkAao5xzusob9c6": {
+      "title": "BP Money Vision/Goal Setting Template",
+      "count": 3870,
+      "updatedAt": "2026-10-29T01:14:05.570710Z"
+    },
+    "bp-budget-template-tracker": {
+      "title": "Personal Budget Template & Tracker",
+      "count": 638,
+      "updatedAt": "2026-10-30T18:36:09.972554Z"
+    },
+    "bp-healthcare-costs-estimator": {
+      "title": "Healthcare Costs Estimator",
+      "count": 2909,
+      "updatedAt": "2026-10-30T18:25:29.959563Z"
+    },
+    "bp-income-tax-projection": {
+      "title": "Income Tax Projection Calculator",
+      "count": 1119,
+      "updatedAt": "2026-10-30T18:30:43.145629Z"
+    },
+    "bp-mega-backdoor-roth-guide": {
+      "title": "Mega Backdoor Roth (Mega Cap) Strategy Guide",
+      "count": 351,
+      "updatedAt": "2026-10-28T23:01:57.162753Z"
+    },
+    "bp-mortgage-payoff-calculator": {
+      "title": "Mortgage Payoff & Amortization Calculator",
+      "count": 675,
+      "updatedAt": "2026-10-28T06:20:02.935676Z"
+    },
+    "bp-personal-financial-statement": {
+      "title": "Personal Financial Statement (PFS) for FIRE",
+      "count": 1601,
+      "updatedAt": "2026-10-28T00:04:24.856665Z"
+    },
+    "cVIAlLn6rU7pIay6ge4C": {
+      "title": "BPM Money Date Template",
+      "count": 937,
+      "updatedAt": "2026-10-29T21:31:27.583095Z"
+    },
+    "fm5CSMlk66LR3Tgk6xdB": {
+      "title": "Forgotten Expenses Checklist",
+      "count": 74,
+      "updatedAt": "2026-10-23T19:34:32.905932Z"
+    },
+    "jOu2yJcNGXF5azlRgsHO": {
+      "title": "The CEO Toolkit",
+      "count": 452,
+      "updatedAt": "2026-10-21T01:01:20.210683Z"
+    },
+    "twaRw8Dh7USwpcJ56bcW": {
+      "title": "The Ultimate Guide to Decumulation (2026)",
+      "count": 1213,
+      "updatedAt": "2026-10-28T20:58:48.591404Z"
+    },
+    "u1y3YGtNeKLhuzBWX3GG": {
+      "title": "Roth Conversion Window Worksheet",
+      "count": 19,
+      "updatedAt": "2026-10-26T16:35:53.705126Z"
+    }
+  }
+}
