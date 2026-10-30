@@ -1,7 +1,7 @@
 
 import { Lead, Resource } from '../types';
 import { auth, db, storage } from '../firebaseConfig';
-import { STATIC_RESOURCES } from '../data/staticResources';
+import { correctLegacyCatalogMetadata, STATIC_RESOURCES } from '../data/staticResources';
 import {
   collection,
   getDocs,
@@ -54,7 +54,7 @@ export const getResources = async (): Promise<Resource[]> => {
   try {
     const resourcesCol = collection(db, 'resources');
     const resourceSnapshot = await getDocs(resourcesCol);
-    return resourceSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Resource));
+    return resourceSnapshot.docs.map(doc => correctLegacyCatalogMetadata({ ...doc.data(), id: doc.id } as Resource));
   } catch (err) {
     console.error("[API] Failed to fetch resources:", err);
     return [];
@@ -67,7 +67,7 @@ export const subscribeResources = (
 ): (() => void) => {
   const resourcesCol = collection(db, 'resources');
   return onSnapshot(resourcesCol, (snapshot) => {
-    const resources = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Resource));
+    const resources = snapshot.docs.map(doc => correctLegacyCatalogMetadata({ ...doc.data(), id: doc.id } as Resource));
     onUpdate(resources);
   }, (err) => {
     console.error("[API] Real-time subscription failed:", err);
