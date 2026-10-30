@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
+import { ChevronDownIcon } from '../components/icons';
 import ResourceCard from '../components/ResourceCard';
 import DownloadModal from '../components/DownloadModal';
 import { getSubscriberEmail } from '../utils/emailGate';
@@ -19,6 +20,9 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
   const [activeTags, setActiveTags] = useState<Tag[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filterToggle = useRef<HTMLButtonElement>(null);
+  const filterCount = activeTags.length + (activeCategory ? 1 : 0);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -260,62 +264,82 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
 
   return (
     <>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10 max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 relative z-10 max-w-7xl">
         {/* Hero Section */}
-        <div className="text-center mb-6 max-w-2xl mx-auto">
+        <div className="text-center mb-4 max-w-2xl mx-auto">
             <h1 className="text-3xl sm:text-4xl font-serif font-bold text-ink tracking-tight">
               BiggerPockets Money <span className="text-primary">Resource Library</span>
             </h1>
             <p className="mt-2 text-sm text-ink2 leading-relaxed">
-              Download free, premium projection calculators, DIY budget toolkits, and expert templates to accelerate your retirement.
+              Free calculators, worksheets, and sample financial plans.
             </p>
         </div>
         
         {/* Main Interface Wrapper */}
         <div className="w-full">
-            {/* Search and Popular Queries Row */}
-            <div className="mb-8">
-              <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-              
-              <div className="flex flex-wrap items-center justify-center gap-2.5 mt-5 text-xs font-semibold text-slate-500">
-                <span className="text-slate-400 font-black tracking-tight">Trending:</span>
-                {['Retirement', 'Web App', 'Calculator', 'Budget', 'Taxes', 'Checklist'].map((pill) => (
-                  <button
-                    key={pill}
-                    onClick={() => setSearchTerm(pill)}
-                    className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-primary/5 hover:text-primary hover:border-primary/20 border border-slate-200/70 transition-all duration-300 cursor-pointer text-xs font-bold shadow-sm active:scale-95"
-                  >
-                    {pill}
-                  </button>
-                ))}
+            <div className="max-w-3xl mx-auto mb-4">
+              <div className="flex items-stretch gap-2">
+                <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+                <button
+                  type="button"
+                  ref={filterToggle}
+                  aria-expanded={filtersOpen}
+                  aria-controls="library-filters"
+                  onClick={() => setFiltersOpen(open => !open)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-forest hover:bg-card focus-visible:outline-primary"
+                >
+                  Filters{filterCount > 0 && ` (${filterCount})`}
+                  <ChevronDownIcon className={`h-4 w-4 ${filtersOpen ? 'rotate-180' : ''}`} />
+                </button>
               </div>
-            </div>
-
-            {/* Filter and Category Controls Panel */}
-            <div className="mb-8 p-5 bg-card rounded-3xl border border-line2 shadow-md">
-              <FilterButtons 
-                resources={resources}
-                activeCategory={activeCategory}
-                activeTags={activeTags}
-                onCategoryChange={setActiveCategory}
-                onTagToggle={handleTagToggle}
-                onClear={handleClearFilters}
-              />
+              <section
+                id="library-filters"
+                aria-label="Resource filters"
+                hidden={!filtersOpen}
+                onKeyDown={event => {
+                  if (event.key === 'Escape') {
+                    setFiltersOpen(false);
+                    filterToggle.current?.focus();
+                  }
+                }}
+                className="mt-2 rounded-xl border border-line2 bg-card p-3 sm:p-4"
+              >
+                <FilterButtons
+                  resources={resources}
+                  activeCategory={activeCategory}
+                  activeTags={activeTags}
+                  onCategoryChange={setActiveCategory}
+                  onTagToggle={handleTagToggle}
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line2 pt-2">
+                  <span className="text-xs font-semibold text-ink2">Suggested searches</span>
+                  {['Retirement', 'Web App', 'Calculator', 'Budget', 'Taxes', 'Checklist'].map(term => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => setSearchTerm(term)}
+                      className="rounded-md px-1.5 py-1 text-sm text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </section>
             </div>
 
             {/* Main Listing Section */}
             <div>
               {/* Results Title Bar */}
-              <div className="mb-6 flex items-center justify-between border-b border-slate-200/60 pb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                  All Available Tools ({filteredResources.length})
+              <div className="mb-3 flex items-center justify-between">
+                <span aria-live="polite" className="text-xs font-semibold text-ink2">
+                  {filteredResources.length} {filteredResources.length === 1 ? 'resource' : 'resources'}
                 </span>
                 {hasActiveFilters && (
                   <button
                     onClick={handleClearFilters}
                     className="text-xs font-black text-primary hover:text-primary-dark transition-colors cursor-pointer flex items-center gap-1.5 hover:underline"
                   >
-                    Clear Filters ×
+                    Clear all
                   </button>
                 )}
               </div>
