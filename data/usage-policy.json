@@ -50,7 +50,9 @@
     },
     "cVIAlLn6rU7pIay6ge4C": {
       "title": "BPM Money Date Template",
-      "kind": "downloads"
+      "kind": "downloads",
+      "baseline": 3,
+      "evidence": "GA4 file_download events for the Money Date Template PDF through 2026-10-29"
     },
     "SPW9zrqKWvGhO1LVhXHJ": {
       "title": "Withdrawal Frameworks Presentation",

@@ -1,4 +1,4 @@
-import { canonicalId, isAlias, usageLabel, useUsage } from '../utils/usage';
+import { canonicalId, isAlias, usageLabel, useUsage, directAction } from '../utils/usage';
 import React, { useState, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -276,6 +276,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
                     rel="noopener noreferrer"
                     onClick={(e) => {
                       e.stopPropagation();
+                      directAction(e.currentTarget, resource.id);
                       handleDownloadClick();
                     }}
                     className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-6 py-3.5 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-350 cursor-pointer active:scale-[0.98] font-bold text-sm uppercase tracking-wider"

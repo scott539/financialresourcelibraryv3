@@ -42,8 +42,8 @@ export const STATIC_RESOURCES: Resource[] = [
     category: MainCategory.TOOLKIT,
     type: ResourceType.SPREADSHEET,
     tags: [Tag.CALCULATORS, Tag.PROJECTION_MODELS],
-    googleDriveUrl: 'https://biggerpocketsmoney.com/income-tax-projection/',
-    fileUrl: 'https://biggerpocketsmoney.com/income-tax-projection/',
+    googleDriveUrl: 'https://biggerpocketsmoney.com/tax-projection/',
+    fileUrl: 'https://biggerpocketsmoney.com/tax-projection/',
     fileName: 'Income_Tax_Projection_Model.xlsx',
     imageUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80',
     downloadCount: 899,
@@ -105,8 +105,8 @@ export const STATIC_RESOURCES: Resource[] = [
     category: MainCategory.TOOLKIT,
     type: ResourceType.SPREADSHEET,
     tags: [Tag.FINANCIAL_STATEMENTS, Tag.GOAL_SETTING],
-    googleDriveUrl: 'https://biggerpocketsmoney.com/pfs/',
-    fileUrl: 'https://biggerpocketsmoney.com/pfs/',
+    googleDriveUrl: 'https://biggerpocketsmoney.com/resources-pfs/',
+    fileUrl: 'https://biggerpocketsmoney.com/resources-pfs/',
     fileName: 'Personal_Financial_Statement_FIRE.xlsx',
     imageUrl: 'https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&w=600&q=80',
     downloadCount: 1420,
@@ -120,6 +120,12 @@ export const STATIC_RESOURCES: Resource[] = [
 // Firestore records take precedence over the seed. Correct only the known
 // legacy values on read; never re-seed an existing document or reset its views.
 export function correctLegacyCatalogMetadata(resource: Resource): Resource {
+  if (resource.id === 'bp-income-tax-projection') {
+    const old = 'https://biggerpocketsmoney.com/income-tax-projection/';
+    const url = 'https://biggerpocketsmoney.com/tax-projection/';
+    return { ...resource, ...(resource.fileUrl === old && { fileUrl: url }),
+      ...(resource.googleDriveUrl === old && { googleDriveUrl: url }) };
+  }
   if (resource.id === 'QnASLbFPLE48vS6UZqsH' && resource.title === "Bitcon's Binary Endgame (PDF)") {
     return { ...resource, title: "Bitcoin's Binary Endgame (PDF)" };
   }

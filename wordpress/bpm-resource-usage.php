@@ -5,6 +5,15 @@
  */
 defined('ABSPATH') || exit;
 
+// Preserve the old spoken/printed PFS shortcut. Its landing page is never a download.
+add_action('template_redirect', static function () {
+    if (is_404() && is_string($_SERVER['REQUEST_URI'] ?? null) &&
+        strtolower(trim(wp_parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/')) === 'pfs') {
+        wp_safe_redirect(home_url('/resources-pfs/'), 301);
+        exit;
+    }
+});
+
 add_action('wp_footer', static function () {
     if (is_admin() || is_preview() || is_404() || !is_singular() ||
         !in_array(wp_parse_url(home_url(), PHP_URL_HOST), array('biggerpocketsmoney.com', 'www.biggerpocketsmoney.com'), true)) {

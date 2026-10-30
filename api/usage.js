@@ -6,7 +6,11 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     res.setHeader('Cache-Control', 'private, no-store');
     try {
-      if (config) return res.json({ counts: await ledger(config).totals(), since: config.start, live: true });
+      if (config) {
+        const counts = await ledger(config).totals();
+        res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=3');
+        return res.json({ counts, since: config.start, live: true });
+      }
     } catch { /* Always retain the verified baseline if the counter store is offline. */ }
     return res.json({ counts: baselineCounts(), since: null, live: false });
   }

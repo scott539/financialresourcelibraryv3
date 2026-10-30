@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
     setIsLoading(true);
     const [fetchedResources, fetchedLeads] = await Promise.all([
       api.getResources(),
-      isAuthenticated ? api.getLeads() : Promise.resolve([]),
+      isAuthenticated && !__BPM_PREVIEW__ ? api.getLeads() : Promise.resolve([]),
     ]);
     
     // Merge database resources and static resources, ensuring we don't duplicate by ID or exact title
@@ -170,6 +170,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleUpdateCredentials = async (currentPass: string, newUser: string, newPass: string): Promise<boolean> => {
+    if (__BPM_PREVIEW__) return false;
     return await api.updateCredentials(currentPass, newUser, newPass);
   };
 
@@ -203,16 +204,19 @@ const AppContent: React.FC = () => {
   };
 
   const addResource = async (resourceData: Omit<Resource, 'id'>, file?: File) => {
+    if (__BPM_PREVIEW__) throw new Error('Catalog editing is disabled on previews.');
     await api.addResource(resourceData, file);
     fetchData();
   };
 
   const updateResource = async (updatedResource: Resource, file?: File) => {
+    if (__BPM_PREVIEW__) throw new Error('Catalog editing is disabled on previews.');
     await api.updateResource(updatedResource, file);
     fetchData();
   };
 
   const deleteResource = async (id: string) => {
+    if (__BPM_PREVIEW__) throw new Error('Catalog editing is disabled on previews.');
     const resourceToDelete = resources.find(r => r.id === id);
     if (resourceToDelete) {
       await api.deleteResource(id, resourceToDelete);

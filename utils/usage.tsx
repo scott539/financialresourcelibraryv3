@@ -44,6 +44,9 @@ export function usageLabel(id: string, state: Counts) {
   const key = canonicalId(id);
   if (isTool(key)) return (state.counts[key] ?? rules[key].baseline ?? 0).toLocaleString() + ' page views';
   if (!isFile(id)) return 'Resource';
+  if (rules[key].baseline) {
+    return (state.counts[key] ?? rules[key].baseline).toLocaleString() + ' recorded downloads';
+  }
   if (!state.live || !state.since) return 'Download history unavailable';
   return (state.counts[key] || 0).toLocaleString() + ' downloads since ' + state.since;
 }
@@ -60,4 +63,17 @@ export function trackCopy(id: string, raw: string) {
     void fetch('/api/copy', { method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({id:canonicalId(id),eventId:crypto.randomUUID()}), keepalive:true }).catch(() => {});
   } catch { /* A malformed document URL is not an eligible copy link. */ }
+}
+
+// Direct-open catalog entries may point either to a tool, a copy dialog or an
+// actual file. Only an explicitly requested file goes through delivery verification.
+export function directAction(anchor: HTMLAnchorElement, id: string) {
+  if (!isFile(id)) return;
+  const original = anchor.href;
+  if (original.startsWith('https://firebasestorage.googleapis.com/v0/b/bp-money-resources.firebasestorage.app/o/')) {
+    anchor.href = fileHref(id);
+    setTimeout(() => { anchor.href = original; }, 0);
+  } else {
+    trackCopy(id, original);
+  }
 }

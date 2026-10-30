@@ -1,4 +1,4 @@
-import { useUsage, usageLabel, isTool } from '../utils/usage';
+import { useUsage, usageLabel, isTool, directAction } from '../utils/usage';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -219,6 +219,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   e.stopPropagation();
+                  directAction(e.currentTarget, resource.id);
                   onDownloadClick(resource);
                 }}
                 className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-5 py-3 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer active:scale-[0.98] font-bold text-xs uppercase tracking-wider"
@@ -381,6 +382,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   e.stopPropagation();
+                  directAction(e.currentTarget, resource.id);
                   onDownloadClick(resource);
                 }}
                 className="w-full text-center bg-primary hover:bg-primary-dark text-white px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer active:scale-[0.98] text-[11px] font-bold uppercase tracking-wider"
