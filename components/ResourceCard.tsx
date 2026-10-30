@@ -1,3 +1,4 @@
+import { useUsage, usageLabel, isTool } from '../utils/usage';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -52,7 +53,6 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     type, 
     tags = [], 
     imageUrl, 
-    downloadCount, 
     isComingSoon, 
     googleDriveUrl, 
     fileUrl, 
@@ -61,6 +61,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     updatedAt 
   } = resource;
   
+  const metric = usageLabel(resource.id, useUsage());
   const [isExpanded, setIsExpanded] = useState(false);
   const descriptionLimit = layout === 'horizontal' ? 180 : 70;
   const isLongDescription = description.length > descriptionLimit;
@@ -159,13 +160,12 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               </span>
               <div className="flex items-center gap-3 text-slate-600 font-semibold text-[11px] bg-slate-50 border border-slate-200/50 px-2.5 py-1 rounded-full shadow-2xs">
                 <span className="flex items-center gap-1">
-                  {isOpenDirectly ? (
+                  {isTool(resource.id) ? (
                     <EyeIcon className="w-3.5 h-3.5 text-slate-500" />
                   ) : (
                     <DownloadIcon className="w-3.5 h-3.5 text-slate-500" />
                   )}
-                  <span className="font-bold text-slate-800">{(downloadCount || 0).toLocaleString()}</span>
-                  <span className="text-slate-500">{isOpenDirectly ? 'Views' : 'Downloads'}</span>
+                  <span className="font-bold text-slate-800">{metric}</span>
                 </span>
                 {lastUpdated && (
                   <span className="text-slate-400 border-l border-slate-200 pl-2.5">
@@ -311,12 +311,12 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               textShadow: '0 1px 2px rgba(0,0,0,0.5)'
             }}
           >
-            {isOpenDirectly ? (
+            {isTool(resource.id) ? (
               <EyeIcon className="w-3.5 h-3.5" />
             ) : (
               <DownloadIcon className="w-3.5 h-3.5" />
             )}
-            <span>{(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : isOpenDirectly ? 'Views' : 'Downloads'}</span>
+            <span>{metric}</span>
           </div>
         </MediaWrap>
 

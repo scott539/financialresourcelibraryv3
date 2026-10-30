@@ -308,7 +308,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({ onSubmit, initialData, onCa
                             </div>
                         </div>
                         <div>
-                            <label htmlFor="downloadCount" className="block text-sm font-medium text-gray-700">Views / Downloads Count (Initial Offset)</label>
+                            <label htmlFor="downloadCount" className="block text-sm font-medium text-gray-700">Legacy access count (archived)</label>
                             <input
                                 id="downloadCount"
                                 type="number"

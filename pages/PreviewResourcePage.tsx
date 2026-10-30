@@ -1,3 +1,4 @@
+import { canonicalId, isAlias, usageLabel, useUsage } from '../utils/usage';
 import React, { useState, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -37,6 +38,7 @@ const getOpenLabel = (type: ResourceType): string => {
 };
 
 const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, onDownload, onGoogleDriveClick }) => {
+  const usage = useUsage();
   const { id } = useParams<{ id: string }>();
   
   // Find in state resources first, with fallback to static resources to avoid deep-link routing bails
@@ -50,6 +52,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
     window.scrollTo(0, 0);
   }, [id]);
 
+  if (id && isAlias(id)) return <Navigate to={'/preview/' + canonicalId(id)} replace />;
   if (!resource) {
     if (resources.length === 0) {
       return (
@@ -210,8 +213,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
                 <span className="text-slate-400">Resource Statistics</span>
                 <span className="flex items-center gap-1.5 text-slate-800">
                   <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  <span className="font-bold">{(resource.downloadCount || 0).toLocaleString()}</span> 
-                  {resource.isOpenDirectly ? 'Views' : 'Downloads'}
+                  <span className="font-bold">{usageLabel(resource.id, usage)}</span>
                 </span>
               </div>
             </div>

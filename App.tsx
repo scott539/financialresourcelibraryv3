@@ -16,6 +16,7 @@ import { Resource, Lead } from './types';
 import { auth } from './firebaseConfig';
 import * as api from './services/api';
 import { STATIC_RESOURCES } from './data/staticResources';
+import { UsageProvider, fileHref, isFile, trackCopy } from './utils/usage';
 import { AdminIcon } from './components/icons';
 
 const AppContent: React.FC = () => {
@@ -55,22 +56,6 @@ const AppContent: React.FC = () => {
       }
     }
 
-    // Apply session storage fallback to prevent count resetting on instant refreshes or slow background writes
-    try {
-      mergedResources.forEach(res => {
-        const sessionKey = `bp_accessed_${res.id}`;
-        if (sessionStorage.getItem(sessionKey)) {
-          const baseline = STATIC_RESOURCES.find(s => s.id === res.id)?.downloadCount || 0;
-          const expectedMin = (baseline || 0) + 1;
-          if ((res.downloadCount || 0) < expectedMin) {
-            res.downloadCount = expectedMin;
-          }
-        }
-      });
-    } catch (e) {
-      console.error('Error applying session storage fallback:', e);
-    }
-
     setResources(mergedResources);
     setLeads(fetchedLeads);
     setIsLoading(false);
@@ -89,21 +74,6 @@ const AppContent: React.FC = () => {
         }
       }
 
-      try {
-        mergedResources.forEach(res => {
-          const sessionKey = `bp_accessed_${res.id}`;
-          if (sessionStorage.getItem(sessionKey)) {
-            const baseline = STATIC_RESOURCES.find(s => s.id === res.id)?.downloadCount || 0;
-            const expectedMin = (baseline || 0) + 1;
-            if ((res.downloadCount || 0) < expectedMin) {
-              res.downloadCount = expectedMin;
-            }
-          }
-        });
-      } catch (e) {
-        console.error('Error applying session storage fallback:', e);
-      }
-
       setResources(mergedResources);
       setIsLoading(false);
       setIsInitialLoad(false);
@@ -117,7 +87,7 @@ const AppContent: React.FC = () => {
 
   // Sync static resources to Firestore when an authenticated admin/dev session starts
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !__BPM_PREVIEW__) {
       const syncAndReload = async () => {
         await api.syncStaticResources(STATIC_RESOURCES);
         fetchData();
@@ -211,25 +181,14 @@ const AppContent: React.FC = () => {
     const resource = resources.find(r => r.id === resourceId);
     if (!resource) return;
 
-    // Use sessionStorage to de-duplicate increments on the client side per browser tab session
-    const sessionKey = `bp_accessed_${resourceId}`;
-    const alreadyAccessed = sessionStorage.getItem(sessionKey);
-    const shouldIncrement = !alreadyAccessed;
-
-    if (shouldIncrement) {
-      sessionStorage.setItem(sessionKey, 'true');
-      // Update local React state instantly so the user sees the count increment by 1 immediately
-      setResources(prev => prev.map(r => r.id === resourceId ? { ...r, downloadCount: (r.downloadCount || 0) + 1 } : r));
+    // Preserve the signup workflow without treating it as a download.
+    if (!__BPM_PREVIEW__) {
+      api.addLead(resourceId, resource.title, leadData, false).catch(error => console.error('Lead logging failed:', error));
     }
 
-    // Log the lead in the background. Only increment the Firestore download/view count if not already accessed in this session.
-    api.addLead(resourceId, resource.title, leadData, shouldIncrement)
-      .then(() => fetchData())
-      .catch((err) => console.error('Error logging lead:', err));
-    
-    if (triggerFileDownload && !resource.isComingSoon && resource.fileUrl && !resource.isOpenDirectly) {
+    if (triggerFileDownload && !resource.isComingSoon && (resource.fileUrl || resource.id === '0y425w6qfHCnOnTfd0JC') && !resource.isOpenDirectly) {
       const link = document.createElement('a');
-      link.href = resource.fileUrl;
+      link.href = isFile(resource.id) ? fileHref(resource.id) : resource.fileUrl;
       link.target = '_blank';
       link.download = resource.fileName || 'download';
       document.body.appendChild(link);
@@ -239,21 +198,8 @@ const AppContent: React.FC = () => {
   };
 
   const handleGoogleDriveClick = (resourceId: string) => {
-    // Use sessionStorage to de-duplicate increments on the client side per browser tab session
-    const sessionKey = `bp_accessed_${resourceId}`;
-    const alreadyAccessed = sessionStorage.getItem(sessionKey);
-    const shouldIncrement = !alreadyAccessed;
-
-    if (shouldIncrement) {
-      sessionStorage.setItem(sessionKey, 'true');
-      // Update local React state instantly so the user sees the count increment by 1 immediately
-      setResources(prev => prev.map(r => r.id === resourceId ? { ...r, downloadCount: (r.downloadCount || 0) + 1 } : r));
-
-      // Increment access in the background so we do not wait or expire the user click gesture
-      api.incrementResourceAccessCount(resourceId)
-        .then(() => fetchData())
-        .catch((err) => console.error('Error incrementing resource access:', err));
-    }
+    const resource = resources.find(item => item.id === resourceId);
+    if (resource?.googleDriveUrl) trackCopy(resourceId, resource.googleDriveUrl);
   };
 
   const addResource = async (resourceData: Omit<Resource, 'id'>, file?: File) => {
@@ -366,7 +312,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <HashRouter>
-      <AppContent />
+      <UsageProvider><AppContent /></UsageProvider>
     </HashRouter>
   );
 };

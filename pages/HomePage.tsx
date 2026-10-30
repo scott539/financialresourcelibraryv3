@@ -1,3 +1,4 @@
+import { isAlias, isTool, useUsage } from '../utils/usage';
 import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
@@ -26,11 +27,17 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const usage = useUsage();
+  const rankKey = JSON.stringify([searchTerm, activeCategory, activeTags, usage.live]);
+  const ranks = useRef({ key: rankKey, counts: usage.counts });
+  if (ranks.current.key !== rankKey) ranks.current = { key: rankKey, counts: usage.counts };
+  const rankCounts = ranks.current.counts;
+
   // Filter out hidden/future items first
   const visibleResources = useMemo(() => {
     return resources.filter(resource => {
       // Exclude hidden resources from the public view
-      if (resource.isHidden && !showManage) {
+      if (isAlias(resource.id) || (resource.isHidden && !showManage)) {
         return false;
       }
 
@@ -167,26 +174,23 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
           }
         }
 
-        // Secondary sort: Featured items higher
-        const now = new Date();
-        const aFeatured = a.resource.isFeatured && (!a.resource.featuredUntil || new Date(a.resource.featuredUntil) > now);
-        const bFeatured = b.resource.isFeatured && (!b.resource.featuredUntil || new Date(b.resource.featuredUntil) > now);
+        if (isTool(a.resource.id) !== isTool(b.resource.id)) return isTool(a.resource.id) ? -1 : 1;
+        return ((rankCounts[b.resource.id] || 0) - (rankCounts[a.resource.id] || 0)) ||
+          a.resource.title.localeCompare(b.resource.title);
 
-        if (aFeatured && !bFeatured) return -1;
-        if (!aFeatured && bFeatured) return 1;
-        
-        // Otherwise, sort by download count
-        return (b.resource.downloadCount || 0) - (a.resource.downloadCount || 0);
       })
       .map(({ resource }) => resource);
-  }, [visibleResources, searchTerm, activeCategory, activeTags]);
+  }, [visibleResources, searchTerm, activeCategory, activeTags, rankCounts]);
 
   // Determine if filters are active
   const hasActiveFilters = useMemo(() => {
     return !!(searchTerm || activeCategory || activeTags.length > 0);
   }, [searchTerm, activeCategory, activeTags]);
 
-  const gridResources = filteredResources;
+  const groups = searchTerm.trim() ? [{ title: '', items: filteredResources }] : [
+    { title: 'Web tools', items: filteredResources.filter(r => isTool(r.id)) },
+    { title: 'Downloads and templates', items: filteredResources.filter(r => !isTool(r.id)) }
+  ];
 
   const handleTagToggle = (tag: Tag) => {
     setActiveTags(prev => 
@@ -305,7 +309,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                 className="mt-2 rounded-xl border border-line2 bg-card p-3 sm:p-4"
               >
                 <FilterButtons
-                  resources={resources}
+                  resources={visibleResources}
                   activeCategory={activeCategory}
                   activeTags={activeTags}
                   onCategoryChange={setActiveCategory}
@@ -345,9 +349,11 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
               </div>
 
               {/* Grid Layout - Compact 4-Column on Desktop */}
-              {gridResources.length > 0 ? (
+              {filteredResources.length > 0 ? groups.filter(g => g.items.length).map(group => (
+                <section key={group.title} className="mb-6">
+                  {group.title && <h2 className="mb-2 text-lg font-semibold text-forest">{group.title}</h2>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 auto-rows-fr">
-                  {gridResources.map((resource) => (
+                  {group.items.map((resource) => (
                     <ResourceCard 
                       key={resource.id} 
                       resource={resource} 
@@ -356,7 +362,8 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                     />
                   ))}
                 </div>
-              ) : (
+                </section>
+              )) : (
                 <div className="text-center py-20 bg-card border border-line2 rounded-3xl shadow-md max-w-md mx-auto p-8">
                   <div className="h-16 w-16 rounded-2xl bg-paper border border-line flex items-center justify-center mx-auto mb-5 text-ink2 shadow-inner font-mono text-xl font-bold">
                     ?
