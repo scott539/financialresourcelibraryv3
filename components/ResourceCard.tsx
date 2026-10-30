@@ -1,3 +1,5 @@
+import { useUsage, usageLabel, isTool, directAction } from '../utils/usage';
+import { isActiveFeature } from '../utils/catalogOrder';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -8,6 +10,7 @@ interface ResourceCardProps {
   onDownloadClick: (resource: Resource) => void;
   onGoogleDriveClick: (resource: Resource, e: React.MouseEvent) => void;
   layout?: 'horizontal' | 'vertical';
+  featured?: boolean;
   // When true, the card is rendered inside an external embed. The image and title
   // become inert (no navigation to internal pages); only the download / Drive action
   // remains interactive. Prevents embeds from opening in-app routes.
@@ -44,6 +47,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   onDownloadClick, 
   onGoogleDriveClick,
   layout = 'vertical',
+  featured = isActiveFeature(resource),
   embed = false
 }) => {
   const { 
@@ -52,7 +56,6 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     type, 
     tags = [], 
     imageUrl, 
-    downloadCount, 
     isComingSoon, 
     googleDriveUrl, 
     fileUrl, 
@@ -61,6 +64,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     updatedAt 
   } = resource;
   
+  const metric = usageLabel(resource.id, useUsage());
   const [isExpanded, setIsExpanded] = useState(false);
   const descriptionLimit = layout === 'horizontal' ? 180 : 70;
   const isLongDescription = description.length > descriptionLimit;
@@ -135,7 +139,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-black/5 pointer-events-none" />
           
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+            {featured && (
               <span className="bg-primary px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-md backdrop-blur-sm">
                 Featured Tool
               </span>
@@ -159,13 +163,12 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               </span>
               <div className="flex items-center gap-3 text-slate-600 font-semibold text-[11px] bg-slate-50 border border-slate-200/50 px-2.5 py-1 rounded-full shadow-2xs">
                 <span className="flex items-center gap-1">
-                  {isOpenDirectly ? (
+                  {isTool(resource.id) ? (
                     <EyeIcon className="w-3.5 h-3.5 text-slate-500" />
                   ) : (
                     <DownloadIcon className="w-3.5 h-3.5 text-slate-500" />
                   )}
-                  <span className="font-bold text-slate-800">{(downloadCount || 0).toLocaleString()}</span>
-                  <span className="text-slate-500">{isOpenDirectly ? 'Views' : 'Downloads'}</span>
+                  <span className="font-bold text-slate-800">{metric}</span>
                 </span>
                 {lastUpdated && (
                   <span className="text-slate-400 border-l border-slate-200 pl-2.5">
@@ -219,6 +222,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   e.stopPropagation();
+                  directAction(e.currentTarget, resource.id);
                   onDownloadClick(resource);
                 }}
                 className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-5 py-3 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer active:scale-[0.98] font-bold text-xs uppercase tracking-wider"
@@ -282,7 +286,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5 pointer-events-none" />
           
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
-            {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+            {featured && (
               <span className="bg-primary/95 backdrop-blur-md text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
                 Featured
               </span>
@@ -311,12 +315,12 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               textShadow: '0 1px 2px rgba(0,0,0,0.5)'
             }}
           >
-            {isOpenDirectly ? (
+            {isTool(resource.id) ? (
               <EyeIcon className="w-3.5 h-3.5" />
             ) : (
               <DownloadIcon className="w-3.5 h-3.5" />
             )}
-            <span>{(downloadCount || 0).toLocaleString()} {isComingSoon ? 'Signups' : isOpenDirectly ? 'Views' : 'Downloads'}</span>
+            <span>{metric}</span>
           </div>
         </MediaWrap>
 
@@ -381,6 +385,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   e.stopPropagation();
+                  directAction(e.currentTarget, resource.id);
                   onDownloadClick(resource);
                 }}
                 className="w-full text-center bg-primary hover:bg-primary-dark text-white px-3 py-2 rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer active:scale-[0.98] text-[11px] font-bold uppercase tracking-wider"

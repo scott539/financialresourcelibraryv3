@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { isAlias, useUsage } from '../utils/usage';
+import { rankCatalog, selectFeaturedResource } from '../utils/catalogOrder';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
@@ -16,7 +17,6 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriveClick, showManage }) => {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
   const [activeTags, setActiveTags] = useState<Tag[]>([]);
@@ -26,11 +26,18 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const usage = useUsage();
+  const rankKey = JSON.stringify([searchTerm, activeCategory, activeTags, usage.live]);
+  const scores = usage.rankCounts ?? usage.counts;
+  const ranks = useRef({ key: rankKey, counts: scores });
+  if (ranks.current.key !== rankKey) ranks.current = { key: rankKey, counts: scores };
+  const rankCounts = ranks.current.counts;
+
   // Filter out hidden/future items first
   const visibleResources = useMemo(() => {
     return resources.filter(resource => {
       // Exclude hidden resources from the public view
-      if (resource.isHidden && !showManage) {
+      if (isAlias(resource.id) || (resource.isHidden && !showManage)) {
         return false;
       }
 
@@ -38,9 +45,20 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
     });
   }, [resources, showManage]);
 
+  const [featureCheck, checkFeature] = useState(Date.now);
+  const featured = selectFeaturedResource(visibleResources);
+  const featuredId = featured?.id;
+  const featuredUntil = featured?.featuredUntil;
+  useEffect(() => {
+    if (!featuredUntil) return;
+    const delay = Math.min(Math.max(0, Date.parse(featuredUntil) - Date.now()), 2147483647);
+    const timer = window.setTimeout(() => checkFeature(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [featuredUntil, featureCheck]);
+
   // Unified filter engine matching title, description, tags, type, or category with smart relevancy scoring
   const filteredResources = useMemo(() => {
-    return visibleResources
+    const matches = visibleResources
       .map(resource => {
         let score = 0;
         const query = searchTerm.toLowerCase().trim();
@@ -158,35 +176,14 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
           : true;
 
         return matchesCategory && matchesTags;
-      })
-      .sort((a, b) => {
-        // Sort by smart relevancy score first if active search
-        if (searchTerm) {
-          if (b.score !== a.score) {
-            return b.score - a.score;
-          }
-        }
-
-        // Secondary sort: Featured items higher
-        const now = new Date();
-        const aFeatured = a.resource.isFeatured && (!a.resource.featuredUntil || new Date(a.resource.featuredUntil) > now);
-        const bFeatured = b.resource.isFeatured && (!b.resource.featuredUntil || new Date(b.resource.featuredUntil) > now);
-
-        if (aFeatured && !bFeatured) return -1;
-        if (!aFeatured && bFeatured) return 1;
-        
-        // Otherwise, sort by download count
-        return (b.resource.downloadCount || 0) - (a.resource.downloadCount || 0);
-      })
-      .map(({ resource }) => resource);
-  }, [visibleResources, searchTerm, activeCategory, activeTags]);
+      });
+    return rankCatalog(matches, featuredId, rankCounts);
+  }, [visibleResources, searchTerm, activeCategory, activeTags, featuredId, rankCounts]);
 
   // Determine if filters are active
   const hasActiveFilters = useMemo(() => {
     return !!(searchTerm || activeCategory || activeTags.length > 0);
   }, [searchTerm, activeCategory, activeTags]);
-
-  const gridResources = filteredResources;
 
   const handleTagToggle = (tag: Tag) => {
     setActiveTags(prev => 
@@ -305,7 +302,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                 className="mt-2 rounded-xl border border-line2 bg-card p-3 sm:p-4"
               >
                 <FilterButtons
-                  resources={resources}
+                  resources={visibleResources}
                   activeCategory={activeCategory}
                   activeTags={activeTags}
                   onCategoryChange={setActiveCategory}
@@ -345,12 +342,13 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
               </div>
 
               {/* Grid Layout - Compact 4-Column on Desktop */}
-              {gridResources.length > 0 ? (
+              {filteredResources.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 auto-rows-fr">
-                  {gridResources.map((resource) => (
+                  {filteredResources.map((resource) => (
                     <ResourceCard 
                       key={resource.id} 
                       resource={resource} 
+                      featured={resource.id === featuredId}
                       onDownloadClick={handleDownloadClick} 
                       onGoogleDriveClick={handleGoogleDriveClick} 
                     />

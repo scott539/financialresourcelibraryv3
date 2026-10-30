@@ -1,3 +1,4 @@
+declare global { const __BPM_PREVIEW__: boolean; }
 
 
 export enum ResourceType {

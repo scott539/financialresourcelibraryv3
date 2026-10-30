@@ -1,3 +1,4 @@
+import { canonicalId, isAlias } from '../utils/usage';
 import React from 'react';
 import { useParams, useLocation, Navigate } from 'react-router-dom';
 import { Resource, EmbedLayout, DEFAULT_EMBED_LAYOUT } from '../types';
@@ -46,6 +47,7 @@ const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDown
   // Find in state resources first, with fallback to static resources to avoid deep-link routing bails.
   const resource = resources.find(r => r.id === id) || STATIC_RESOURCES.find(r => r.id === id);
 
+  if (id && isAlias(id)) return <Navigate to={'/embed/' + canonicalId(id) + location.search} replace />;
   if (!resource) {
     if (resources.length === 0) {
       return (
@@ -66,12 +68,12 @@ const EmbedResourcePage: React.FC<EmbedResourcePageProps> = ({ resources, onDown
   // counted, but the file/Drive link opens directly.
 
   const handleDownloadClick = (res: Resource) => {
-    // Count the download, then let the browser open the href on the anchor itself.
+    // Download buttons delegate file delivery to the parent; open-tool links navigate natively.
     onDownload(res.id, {
       firstName: 'Embed User',
       email: 'embed@subscriber.direct',
       hasConsented: false
-    }, false);
+    }, !res.isOpenDirectly);
     // The button is an <a href> pointing at the file/Drive URL, so navigation happens
     // natively in a new tab; no modal, no in-app routing.
   };

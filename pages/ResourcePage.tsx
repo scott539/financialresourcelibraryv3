@@ -1,3 +1,4 @@
+import { usageLabel, useUsage } from '../utils/usage';
 import React, { useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { Resource } from '../types';
@@ -11,6 +12,7 @@ interface ResourcePageProps {
 }
 
 const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) => {
+  const usage = useUsage();
   const { id } = useParams<{ id: string }>();
   const resource = resources.find(r => r.id === id);
 
@@ -231,7 +233,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
             <div className="mt-6 flex items-center space-x-4 text-sm text-gray-500">
                 <span>Type: <strong>{resource.type}</strong></span>
                 <span>|</span>
-                <span>{resource.isComingSoon ? 'Signups' : 'Downloads'}: <strong>{(resource.downloadCount || 0).toLocaleString()}</strong></span>
+                <span>{usageLabel(resource.id, usage)}</span>
             </div>
           </div>
           <div className="bg-background-light p-8 rounded-lg shadow-lg sticky top-8">
