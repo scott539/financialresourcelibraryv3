@@ -1,5 +1,19 @@
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 
+// Retain the original ID so existing preview and embed links keep working.
+const megaCapWorkbook = {
+  id: 'bp-mega-backdoor-roth-guide',
+  title: 'Mega-Cap Valuation Workbook',
+  description: 'See how much cash flow growth the prices of mega-cap companies imply. Start with the July 30, 2026 snapshot or enter your own assumptions.',
+  longDescription: 'What growth would justify these share prices? Start with the workbook’s July 30, 2026 valuation snapshot, then change the inputs to see how the required cash flow growth changes. The starting prices are historical, not live quotes.',
+  type: ResourceType.WEB_APP,
+  tags: [Tag.PROJECTION_MODELS],
+  googleDriveUrl: 'https://biggerpocketsmoney.com/megacap/',
+  fileUrl: 'https://biggerpocketsmoney.com/megacap/',
+  fileName: '',
+  actionLabel: 'Open Workbook',
+};
+
 export const STATIC_RESOURCES: Resource[] = [
   {
     id: 'bp-budget-template-tracker',
@@ -75,22 +89,13 @@ export const STATIC_RESOURCES: Resource[] = [
     actionLabel: 'Open Spreadsheet'
   },
   {
-    id: 'bp-mega-backdoor-roth-guide',
-    title: 'Mega Backdoor Roth (Mega Cap) Strategy Guide',
-    description: 'Master the advanced after-tax 401(k) contribution strategy to supercharge your tax-free retirement savings.',
-    longDescription: 'An advanced, step-by-step strategy blueprint designed to help high-income earners utilize after-tax 401(k) contributions and in-plan conversions to funnel up to tens of thousands of extra dollars into tax-free Roth accounts annually.',
+    ...megaCapWorkbook,
     category: MainCategory.TOOLKIT,
-    type: ResourceType.PDF,
-    tags: [Tag.PROJECTION_MODELS, Tag.HIGH_INCOME],
-    googleDriveUrl: 'https://biggerpocketsmoney.com/megacap/',
-    fileUrl: 'https://biggerpocketsmoney.com/megacap/',
-    fileName: 'Mega_Backdoor_Roth_Strategy_Guide.pdf',
     imageUrl: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=600&q=80',
     downloadCount: 229,
     isComingSoon: false,
     isHidden: false,
-    isOpenDirectly: true,
-    actionLabel: 'Read Strategy Guide'
+    isOpenDirectly: true
   },
   {
     id: 'bp-personal-financial-statement',
@@ -111,3 +116,27 @@ export const STATIC_RESOURCES: Resource[] = [
     actionLabel: 'Open Spreadsheet'
   }
 ];
+
+// Firestore records take precedence over the seed. Correct only the known
+// legacy values on read; never re-seed an existing document or reset its views.
+export function correctLegacyCatalogMetadata(resource: Resource): Resource {
+  if (resource.id === 'QnASLbFPLE48vS6UZqsH' && resource.title === "Bitcon's Binary Endgame (PDF)") {
+    return { ...resource, title: "Bitcoin's Binary Endgame (PDF)" };
+  }
+  if (
+    resource.id !== megaCapWorkbook.id ||
+    resource.title !== 'Mega Backdoor Roth (Mega Cap) Strategy Guide' ||
+    (resource.googleDriveUrl || resource.fileUrl) !== megaCapWorkbook.fileUrl
+  ) return resource;
+
+  return {
+    ...resource,
+    title: megaCapWorkbook.title,
+    ...(resource.description === 'Master the advanced after-tax 401(k) contribution strategy to supercharge your tax-free retirement savings.' && { description: megaCapWorkbook.description }),
+    ...(resource.longDescription === 'An advanced, step-by-step strategy blueprint designed to help high-income earners utilize after-tax 401(k) contributions and in-plan conversions to funnel up to tens of thousands of extra dollars into tax-free Roth accounts annually.' && { longDescription: megaCapWorkbook.longDescription }),
+    ...(resource.type === ResourceType.PDF && { type: megaCapWorkbook.type }),
+    ...(resource.tags?.includes(Tag.HIGH_INCOME) && { tags: resource.tags.filter(tag => tag !== Tag.HIGH_INCOME) }),
+    ...(resource.fileName === 'Mega_Backdoor_Roth_Strategy_Guide.pdf' && { fileName: megaCapWorkbook.fileName }),
+    ...((!resource.actionLabel || resource.actionLabel === 'Read Strategy Guide') && { actionLabel: megaCapWorkbook.actionLabel }),
+  };
+}
