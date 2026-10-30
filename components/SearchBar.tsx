@@ -8,7 +8,7 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange }) => {
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="min-w-0 flex-1">
       <div className="relative group">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           <svg className="h-5 w-5 text-slate/40 group-focus-within:text-primary transition-colors duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -17,15 +17,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange }) => 
         </div>
         <input
           type="text"
-          placeholder="Search for templates, calculators, or wealth guides..."
+          aria-label="Search resources"
+          placeholder="Search resources"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="block w-full pl-11 pr-12 py-4 border border-slate-200/90 rounded-2xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-4 focus:ring-primary/10 focus:border-primary sm:text-sm shadow-sm hover:border-slate-300 transition-all duration-200 font-medium text-slate-800"
+          className="block w-full pl-11 pr-12 py-3 border border-slate-200/90 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-4 focus:ring-primary/10 focus:border-primary sm:text-sm shadow-sm hover:border-slate-300 transition-all duration-200 font-medium text-slate-800"
         />
         {searchTerm && (
           <button
             onClick={() => onSearchChange('')}
             className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Clear search"
             title="Clear search"
           >
             <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -39,4 +41,3 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange }) => 
 };
 
 export default SearchBar;
-
