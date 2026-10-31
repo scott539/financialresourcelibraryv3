@@ -1,0 +1,53 @@
+<style>
+  #bp-money-iframe { display: block; width: 100%; border: 0; overflow: hidden; overflow-anchor: none; }
+  html.bpm-library-loading, html.bpm-library-loading body { overflow-anchor: none; }
+</style>
+<iframe id="bp-money-iframe" title="Financial Resource Library"
+  src="https://financialresourcelibraryv3.vercel.app/#/"
+  width="100%" height="800" style="height:800px;" scrolling="no" loading="eager">
+</iframe>
+<script>
+(function () {
+  var iframe = document.getElementById('bp-money-iframe');
+  if (!iframe) return;
+  var origin = new URL(iframe.src).origin;
+  var root = document.documentElement;
+  var navigation = performance.getEntriesByType('navigation')[0];
+  var startX = window.scrollX;
+  var startY = window.scrollY;
+  // Guard only a fresh, unanchored visit at the top. Leave history restoration,
+  // deep links, and any deliberate user scroll alone.
+  var guarding = (!navigation || navigation.type === 'navigate') && !location.hash && startY < 8;
+  var events = ['pointerdown', 'touchstart', 'wheel', 'keydown'];
+  function finish() {
+    guarding = false;
+    root.classList.remove('bpm-library-loading');
+    events.forEach(function (name) { window.removeEventListener(name, finish, true); });
+    clearTimeout(timeout);
+  }
+  if (guarding) {
+    root.classList.add('bpm-library-loading');
+    events.forEach(function (name) { window.addEventListener(name, finish, { capture: true, passive: true }); });
+  }
+  var timeout = setTimeout(finish, 15000);
+  window.addEventListener('message', function (event) {
+    if (event.origin !== origin || event.source !== iframe.contentWindow) return;
+    var data = event.data;
+    if (!data || data.type !== 'financial-library-resize' || data.ready === false) return;
+    var height = Number(data.height);
+    if (!Number.isFinite(height) || height <= 0 || height > 100000) return;
+    height = Math.max(320, Math.ceil(height));
+    var current = iframe.getBoundingClientRect().height;
+    // Retain tolerance for legacy app builds that measure viewport height + 2.
+    if (Math.abs(current - height) > (data.ready === true ? 0 : 10)) iframe.style.height = height + 'px';
+    if (guarding) {
+      window.scrollTo({ left: startX, top: startY, behavior: 'instant' });
+      requestAnimationFrame(function () {
+        if (!guarding) return;
+        window.scrollTo({ left: startX, top: startY, behavior: 'instant' });
+        if (data.ready === true) finish();
+      });
+    }
+  });
+})();
+</script>

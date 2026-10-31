@@ -18,6 +18,7 @@ import * as api from './services/api';
 import { STATIC_RESOURCES } from './data/staticResources';
 import { UsageProvider, fileHref, isFile, trackCopy } from './utils/usage';
 import { AdminIcon } from './components/icons';
+import { measureIframeContent } from './utils/iframeSizing';
 
 const AppContent: React.FC = () => {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -97,43 +98,29 @@ const AppContent: React.FC = () => {
   }, [isAuthenticated, fetchData]);
 
   useEffect(() => {
-    if (window.self === window.top) return;
+    // Keep the host's reserved loading space until the catalog is ready.
+    if (window.self === window.top || isInitialLoad || isAuthLoading) return;
+    const root = document.getElementById('root');
+    if (!root) return;
 
     let rafId: number;
     let lastSent = 0;
-
-    const measure = (): number => {
-      // Use the largest of several signals so we never under-report (which is what
-      // causes an internal scrollbar). scrollHeight can round down and can lag behind
-      // content changes, so we also consider the body's rendered bottom edge.
-      const doc = document.documentElement;
-      const body = document.body;
-      const rectBottom = Math.ceil(body.getBoundingClientRect().bottom);
-      return Math.max(
-        doc.scrollHeight,
-        doc.offsetHeight,
-        body ? body.scrollHeight : 0,
-        body ? body.offsetHeight : 0,
-        rectBottom
-      );
-    };
 
     const postHeight = () => {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         // Add a tiny buffer so sub-pixel rounding on the host side can't clip the last row.
-        const height = measure() + 2;
+        const height = measureIframeContent(root);
         if (height !== lastSent) {
           lastSent = height;
-          window.parent.postMessage({ type: 'financial-library-resize', height }, '*');
+          window.parent.postMessage({ type: 'financial-library-resize', height, ready: true }, '*');
         }
       });
     };
 
-    // Observe both documentElement and body so any content growth is caught.
+    // Observe intrinsic app content, not the host-controlled viewport.
     const observer = new ResizeObserver(postHeight);
-    observer.observe(document.documentElement);
-    if (document.body) observer.observe(document.body);
+    observer.observe(root);
 
     document.addEventListener('transitionend', postHeight);
     window.addEventListener('load', postHeight);
@@ -144,10 +131,7 @@ const AppContent: React.FC = () => {
     const settleTimers = [100, 300, 600, 1200].map((t) => window.setTimeout(postHeight, t));
 
     // If any image finishes loading, its natural size may change the card height.
-    const imgs = Array.from(document.images || []);
-    imgs.forEach((img) => {
-      if (!img.complete) img.addEventListener('load', postHeight, { once: true });
-    });
+    root.addEventListener('load', postHeight, true);
 
     postHeight();
 
@@ -157,9 +141,10 @@ const AppContent: React.FC = () => {
       document.removeEventListener('transitionend', postHeight);
       window.removeEventListener('load', postHeight);
       window.removeEventListener('resize', postHeight);
+      root.removeEventListener('load', postHeight, true);
       settleTimers.forEach((id) => clearTimeout(id));
     };
-  }, []);
+  }, [isInitialLoad, isAuthLoading]);
 
   const handleLogin = async (email: string, pass: string): Promise<boolean> => {
     return await api.login(email, pass);
@@ -243,14 +228,14 @@ const AppContent: React.FC = () => {
 
   if ((isLoading && isInitialLoad) || isAuthLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className={`flex items-center justify-center ${isEmbedded ? 'min-h-[400px]' : 'min-h-screen'}`}>
         <div className="text-xl font-semibold text-slate">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className={`flex flex-col ${isChromeHidden ? 'bg-transparent' : 'min-h-screen bg-paper'}`}>
+    <div className={`flex flex-col ${isChromeHidden ? 'bg-transparent' : 'bg-paper'} ${isEmbedded ? '' : 'min-h-screen'}`}>
       {showManage && <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} showManage={showManage} />}
 
       <main className={`flex-grow ${!isChromeHidden ? 'pb-16 md:pb-0' : ''}`}>
