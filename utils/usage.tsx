@@ -45,7 +45,7 @@ export function UsageProvider({children}: { children: React.ReactNode }) {
 
 export function usageLabel(id: string, state: Counts) {
   const key = canonicalId(id);
-  if (isTool(key)) return (state.counts[key] ?? rules[key].baseline ?? 0).toLocaleString() + ' page views';
+  if (isTool(key)) return (state.counts[key] ?? rules[key].baseline ?? 0).toLocaleString() + ' opens';
   if (!isFile(id)) return 'Resource';
   if (rules[key].legacyBaseline) {
     return (state.counts[key] ?? rules[key].legacyBaseline).toLocaleString() + ' downloads';
