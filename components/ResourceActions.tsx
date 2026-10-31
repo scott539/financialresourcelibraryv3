@@ -2,6 +2,8 @@ import React from 'react';
 import type { Resource } from '../types';
 import { driveActionLabel, resourceFormat } from '../data/catalogEditorial';
 import { directAction } from '../utils/usage';
+import GatedResourceAction from './GatedResourceAction';
+import { shouldGate } from '../utils/libraryGate';
 import { DownloadIcon, LinkIcon } from './icons';
 
 interface Props {
@@ -16,6 +18,15 @@ export default function ResourceActions({ resource, onDownloadClick, onGoogleDri
   const primary = `${base} bg-primary text-white hover:bg-primary-dark`;
   const secondary = `${base} border border-line bg-white text-ink2 hover:text-primary hover:border-primary`;
   const destination = resource.googleDriveUrl || resource.fileUrl;
+
+  if (shouldGate(resource)) return <>
+    {resource.fileUrl && <GatedResourceAction resource={resource} action="downloads" className={primary}>
+      <DownloadIcon className="h-4 w-4" /><span>Download</span>
+    </GatedResourceAction>}
+    {resource.googleDriveUrl && <GatedResourceAction resource={resource} action="copyOpens" className={resource.fileUrl ? secondary : primary}>
+      <LinkIcon className="h-4 w-4" /><span>{driveActionLabel(resource.googleDriveUrl)}</span>
+    </GatedResourceAction>}
+  </>;
 
   if (resource.isComingSoon) return <button type="button" className={primary} onClick={() => onDownloadClick(resource)}>Notify me</button>;
   if (resource.isOpenDirectly && destination) return (
