@@ -42,6 +42,27 @@ const fixture = id => ({...base,id,fileName:patches[id].fileNames[0],...Object.f
 const render = element => renderToStaticMarkup(React.createElement(MemoryRouter,null,element));
 const actions = resource => render(React.createElement(ResourceActions,{resource,onDownloadClick(){throw Error('render must not download');},onGoogleDriveClick(){throw Error('render must not copy');}}));
 
+test('image refresh preserves catalog data, custom uploads, and all retained originals', async()=>{
+ const {applyCatalogImage} = await import('../data/catalogImages.ts');
+ const images=JSON.parse(readFileSync(new URL('../data/catalog-images.json',import.meta.url)));
+ assert.equal(Object.keys(images).length,16);
+ for(const [id,image] of Object.entries(images)) {
+  const original={...fixture(id),imageUrl:image.originalUrl};
+  const refreshed=correct(original);
+  assert.equal(refreshed.imageUrl,image.imageUrl);
+  assert.deepEqual({...refreshed,imageUrl:original.imageUrl},{...correct({...original,imageUrl:'custom-upload'}),imageUrl:original.imageUrl});
+  assert.equal(applyCatalogImage(refreshed),refreshed);
+  const custom={...original,imageUrl:'https://example.com/new-admin-upload.webp'};
+  assert.equal(applyCatalogImage(custom),custom);
+  const asset=readFileSync(new URL('../public'+image.imageUrl,import.meta.url));
+  assert.equal(asset.subarray(8,12).toString(),'WEBP');
+  assert.ok(asset.length>1000 && asset.length<200000);
+ }
+ for(const id of ['0y425w6qfHCnOnTfd0JC','bk9wPWkAao5xzusob9c6','bp-mortgage-payoff-calculator','L26iS881ZhPUIqSWTaRc','QnASLbFPLE48vS6UZqsH',previousChecklistId]) {
+  const resource=fixture(id); assert.equal(applyCatalogImage(resource),resource);
+ }
+});
+
 test('editorial corrections preserve counts, source URLs, future admin edits, and newer uploads',()=>{
  assert.equal(Object.keys(patches).length,22);
  for(const id of Object.keys(patches)) {
