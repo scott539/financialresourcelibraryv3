@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function ResourceActions({ resource, onDownloadClick, onGoogleDriveClick, compact = false }: Props) {
-  const base = `flex items-center justify-center gap-2 rounded-xl px-3 font-semibold transition-colors focus-visible:outline-primary focus-visible:outline-offset-2 ${compact ? 'py-2.5 text-xs' : 'py-3 text-sm'}`;
+  const base = `flex items-center justify-center gap-2 rounded-xl px-3 font-semibold transition-colors focus-visible:outline-primary focus-visible:outline-offset-2 ${compact ? 'min-h-11 sm:min-h-0 py-2.5 text-xs' : 'py-3 text-sm'}`;
   const primary = `${base} bg-primary text-white hover:bg-primary-dark`;
   const secondary = `${base} border border-line bg-white text-ink2 hover:text-primary hover:border-primary`;
   const destination = resource.googleDriveUrl || resource.fileUrl;

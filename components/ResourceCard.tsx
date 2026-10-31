@@ -3,7 +3,7 @@ import { isActiveFeature } from '../utils/catalogOrder';
 import React from 'react';
 import { resourceFormat } from '../data/catalogEditorial';
 import ResourceActions from './ResourceActions';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
 import { DownloadIcon, EyeIcon } from './icons';
 
@@ -31,26 +31,33 @@ const formatDate = (timestamp: any): string | null => {
   }).format(date);
 };
 
-const MediaWrap: React.FC<{ to: string; embed: boolean; className?: string; children: React.ReactNode }> = ({ to, embed, className, children }) =>
-  embed ? <div className={className}>{children}</div> : <Link to={to} className={className}>{children}</Link>;
+const MediaWrap: React.FC<{ to: string; externalTo?: string; embed: boolean; className?: string; children: React.ReactNode }> = ({ to, externalTo, embed, className, children }) =>
+  embed ? <div className={className}>{children}</div> : externalTo
+    ? <a href={externalTo} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>
+    : <Link to={to} className={className}>{children}</Link>;
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ 
-  resource, 
-  onDownloadClick, 
+const ResourceCard: React.FC<ResourceCardProps> = ({
+  resource,
+  onDownloadClick,
   onGoogleDriveClick,
   layout = 'vertical',
   featured = isActiveFeature(resource),
   embed = false
 }) => {
-  const { 
-    title, 
-    description, 
-    type, 
-    imageUrl, 
-    isComingSoon, 
-    updatedAt 
+  const {
+    title,
+    description,
+    type,
+    imageUrl,
+    isComingSoon,
+    updatedAt
   } = resource;
-  
+
+  const location = useLocation();
+  const previewPath = `/preview/${resource.id}${location.search}`;
+  // Web-tool opens are counted on the destination page, never on this link.
+  const directUrl = isTool(resource.id) && resource.isOpenDirectly && !resource.isComingSoon
+    ? resource.googleDriveUrl || resource.fileUrl : undefined;
   const metric = usageLabel(resource.id, useUsage());
   const lastUpdated = formatDate(updatedAt);
 
@@ -91,18 +98,18 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     return (
       <div className={`w-full bg-card rounded-3xl border border-line2 shadow-md transition-all duration-350 overflow-hidden flex flex-col md:flex-row min-h-[300px] ${embed ? '' : 'hover:shadow-lg hover:-translate-y-1'}`}>
         {/* Left Side: Featured Image */}
-        <MediaWrap embed={embed} 
-          to={`/preview/${resource.id}`} 
+        <MediaWrap embed={embed}
+          to={previewPath} externalTo={directUrl}
           className="relative md:w-5/12 bg-slate-50 overflow-hidden min-h-[220px] md:min-h-full block cursor-pointer"
         >
-          <img 
-            src={imageUrl} 
-            alt={title} 
+          <img
+            src={imageUrl}
+            alt={title}
             className="w-full h-full object-contain transition-transform duration-500 ease-out"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-black/5 pointer-events-none" />
-          
+
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
             {featured && (
               <span className="bg-primary px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-md backdrop-blur-sm">
@@ -144,7 +151,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
             </div>
 
             {/* Title */}
-            <MediaWrap embed={embed} to={`/preview/${resource.id}`} className="block hover:text-primary transition-colors duration-250 mb-3 cursor-pointer">
+            <MediaWrap embed={embed} to={previewPath} externalTo={directUrl} className="block hover:text-primary transition-colors duration-250 mb-3 cursor-pointer">
               <h3 className="text-xl sm:text-2xl font-serif font-bold text-ink leading-tight">
                 {title}
               </h3>
@@ -169,18 +176,18 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     <div className="group h-full flex flex-col">
       <div className={`bg-card rounded-2xl border border-line2 shadow-sm transition-all duration-300 ease-out overflow-hidden h-full flex flex-col ${embed ? '' : 'hover:shadow-lg hover:-translate-y-1 hover:border-line'}`}>
         {/* Top Image & Badge Container */}
-        <MediaWrap embed={embed} 
-          to={`/preview/${resource.id}`} 
+        <MediaWrap embed={embed}
+          to={previewPath} externalTo={directUrl}
           className="relative overflow-hidden aspect-[16/9] bg-slate-50 border-b border-slate-100/80 block cursor-pointer"
         >
-          <img 
-            src={imageUrl} 
-            alt={title} 
+          <img
+            src={imageUrl}
+            alt={title}
             className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5 pointer-events-none" />
-          
+
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
             {featured && (
               <span className="bg-primary/95 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-sm">
@@ -193,7 +200,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               </span>
             )}
           </div>
-          
+
           <div
             data-pill-version="v2-solid"
             className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 font-sans"
@@ -221,7 +228,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
         </MediaWrap>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-4.5 flex flex-col flex-grow">
+        <div className="px-3.5 py-3 sm:p-4.5 flex flex-col flex-grow">
           {/* Badge & Stat Header Row */}
           <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] text-slate-500 mb-2">
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${theme.bg}`}>
@@ -231,12 +238,12 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
           </div>
 
-          <MediaWrap embed={embed} to={`/preview/${resource.id}`} className="block hover:text-primary transition-colors duration-250 mb-1.5 cursor-pointer">
+          <MediaWrap embed={embed} to={previewPath} externalTo={directUrl} className="block hover:text-primary transition-colors duration-250 mb-1.5 cursor-pointer">
             <h3 className="text-base font-serif font-semibold text-ink leading-snug tracking-tight">
               {title}
             </h3>
           </MediaWrap>
-          
+
           <div className="flex-grow flex flex-col justify-between">
             <p className="text-ink2 text-[13px] leading-relaxed mb-2">
               {description}
@@ -244,7 +251,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col gap-1.5">
+          <div className="mt-2 pt-2 sm:mt-3.5 sm:pt-3 border-t border-slate-100 flex flex-col gap-1.5">
             <ResourceActions resource={resource} onDownloadClick={onDownloadClick} onGoogleDriveClick={onGoogleDriveClick} compact />
           </div>
         </div>

@@ -16,14 +16,15 @@ export function selectFeaturedResource(resources: Resource[], now = Date.now()) 
 }
 
 export function rankCatalog(matches: { resource: Resource; score: number }[], featuredId: string | undefined,
-  counts: Record<string, number>) {
+  counts: Record<string, number>, searchActive = false) {
   const priority = (id: string) => {
     if (id === featuredId) return 0;
     if (id === pinnedIds[0]) return 1;
     if (id === pinnedIds[1]) return 2;
     return 3;
   };
-  return matches.sort((a, b) => priority(a.resource.id) - priority(b.resource.id) ||
+  return matches.sort((a, b) => (searchActive ? b.score - a.score : 0) ||
+    priority(a.resource.id) - priority(b.resource.id) ||
     (counts[b.resource.id] ?? 0) - (counts[a.resource.id] ?? 0) ||
     b.score - a.score || a.resource.title.localeCompare(b.resource.title) ||
     a.resource.id.localeCompare(b.resource.id)).map(match => match.resource);

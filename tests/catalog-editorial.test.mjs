@@ -42,6 +42,62 @@ const fixture = id => ({...base,id,fileName:patches[id].fileNames[0],...Object.f
 const render = element => renderToStaticMarkup(React.createElement(MemoryRouter,null,element));
 const actions = resource => render(React.createElement(ResourceActions,{resource,onDownloadClick(){throw Error('render must not download');},onGoogleDriveClick(){throw Error('render must not copy');}}));
 
+test('specific searches require topic and format words, without broad fallback matches', async()=>{
+ const {scoreResource}=await import('../utils/catalogSearch.ts');
+ const roth={...correct(fixture('u1y3YGtNeKLhuzBWX3GG')),title:'Roth Conversion Window Worksheet'};
+ const tools=STATIC_RESOURCES.filter(r=>r.id!=='bp-personal-financial-statement');
+ assert.ok(scoreResource(roth,'Roth worksheet')>0);
+ for(const resource of tools) assert.equal(scoreResource(resource,'Roth worksheet'),-1,resource.title);
+ const budget=tools.find(r=>r.id==='bp-budget-template-tracker');
+ assert.ok(scoreResource(budget,'budget')>0);
+ assert.ok(scoreResource(budget,'budget calculator')>0);
+ assert.ok(scoreResource(budget,'compare household spending')>0);
+ assert.equal(scoreResource(budget,'tax spreadsheet'),-1);
+ assert.equal(scoreResource(budget,'happy'),-1,'app must not match a substring of happy');
+ assert.ok(scoreResource(correct(fixture('0y425w6qfHCnOnTfd0JC')),'net worth')>0);
+ assert.ok(scoreResource(tools.find(r=>r.id==='bp-healthcare-costs-estimator'),'health')>0);
+ for(const resource of tools) assert.ok(scoreResource(resource,'web tools')>0,resource.title);
+});
+
+test('search relevance beats popularity and pins; default browsing keeps the approved order',()=>{
+ const pfs={...base,id:'0y425w6qfHCnOnTfd0JC'}, exact={...base,id:'exact'};
+ const matches=[{resource:pfs,score:16},{resource:exact,score:180}];
+ assert.equal(rankCatalog([...matches],undefined,{[pfs.id]:99999,exact:1},true)[0].id,'exact');
+ assert.equal(rankCatalog([...matches],undefined,{[pfs.id]:99999,exact:1})[0].id,pfs.id);
+});
+
+test('retirement, tax and healthcare filters cover their audited resources without overwriting admin changes',()=>{
+ for(const id of ['bp-healthcare-costs-estimator','u1y3YGtNeKLhuzBWX3GG','twaRw8Dh7USwpcJ56bcW','SPW9zrqKWvGhO1LVhXHJ','OTFTrNb2Md3gx2Co1scn']) {
+  assert.ok(correct(fixture(id)).tags.includes('Retirement Planning'),id);
+ }
+ assert.ok(correct(fixture('u1y3YGtNeKLhuzBWX3GG')).tags.includes('Tax Planning'));
+ assert.ok(correct(fixture('bp-healthcare-costs-estimator')).tags.includes('Healthcare'));
+ const custom={...fixture('bp-healthcare-costs-estimator'),tags:['A newer admin tag']};
+ assert.deepEqual(correct(custom).tags,custom.tags);
+});
+
+test('query state round trips through previews, validates filters, and ignores duplicate topics', async()=>{
+ const {readLibraryQuery,libraryReturnPath}=await import('../utils/libraryQuery.ts');
+ const query='?q=Roth+worksheet&topic=Retirement+Planning&topic=Retirement+Planning&format=PDF&collection=plans&filters=open';
+ const state=readLibraryQuery(new URLSearchParams(query));
+ assert.equal(state.searchTerm,'Roth worksheet');assert.equal(state.activeFormat,'PDF');
+ assert.deepEqual(state.activeTags,['Retirement Planning']);assert.equal(state.filtersOpen,true);
+ assert.equal(libraryReturnPath(query),'/' + query);
+ assert.equal(readLibraryQuery(new URLSearchParams('format=invalid&topic=invalid')).activeFormat,null);
+ const resource=correct(fixture('u1y3YGtNeKLhuzBWX3GG'));
+ const html=renderToStaticMarkup(React.createElement(MemoryRouter,{initialEntries:['/'+query]},React.createElement(ResourceCard,{resource,onDownloadClick(){},onGoogleDriveClick(){}})));
+ assert.ok(html.includes('/preview/'+resource.id+'?q=Roth+worksheet'));
+});
+
+test('tool images and titles open the tool directly while file cards retain previews',()=>{
+ const resource=STATIC_RESOURCES.find(r=>r.id==='bp-budget-template-tracker');
+ const html=render(React.createElement(ResourceCard,{resource,onDownloadClick(){},onGoogleDriveClick(){}}));
+ assert.equal((html.match(/href="https:\/\/biggerpocketsmoney.com\/budget\/"/g)||[]).length,3);
+ assert.doesNotMatch(html,/href="\/preview\//);
+ assert.equal(resource.title,'Household Spending Comparison Tool');
+ assert.match(resource.description,/households like yours/);
+});
+
 test('image refresh preserves catalog data, custom uploads, and all retained originals', async()=>{
  const {applyCatalogImage} = await import('../data/catalogImages.ts');
  const images=JSON.parse(readFileSync(new URL('../data/catalog-images.json',import.meta.url)));
