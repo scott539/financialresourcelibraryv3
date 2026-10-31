@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { kitTestConfig } from '../server/kit-config.js';
+import { readTestSubscriberState } from '../server/kit-subscriber.js';
 
 // Run inside Vercel's protected build environment. GET only; never log the
 // credential, HTTP headers, subscriber records, or raw API/error responses.
@@ -45,6 +46,7 @@ export async function checkKitSetup({ env = process.env, request = fetch } = {})
     if (!data.pagination?.has_next_page) return {
       status: 'connected', formsScanned, legacyFormFound, testForms,
       testAddressConfigured: true, writesEnabled: false, publicGateEnabled: false,
+      testSubscriberState: env.KIT_TEST_FORM_ID ? await readTestSubscriberState({ env, request }) : 'unchecked',
     };
     const next = data.pagination.end_cursor;
     if (typeof next !== 'string' || !next || next === after) throw new Error('Kit pagination did not advance.');
