@@ -1,0 +1,572 @@
+{
+  "0y425w6qfHCnOnTfd0JC": {
+    "fileNames": [
+      "Personal_Financial_Statement_2026_V9.xlsx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Personal Financial Statement (PFS) for FI/RE"
+        ],
+        "after": "Personal Financial Statement (PFS)"
+      },
+      "description": {
+        "before": [
+          "A Personal Financial Statement Spreadsheet (.xlsx) specifically highlighting and breaking out a \"Financial\" or \"FIRE\" portfolio from other assets."
+        ],
+        "after": "See your net worth, cash flow, and FI/RE portfolio in one spreadsheet."
+      }
+    }
+  },
+  "bk9wPWkAao5xzusob9c6": {
+    "fileNames": [
+      "BP_Money_Goal_Setting_Template V3.31.2026.pptx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "BP Money Vision/Goal Setting Template"
+        ],
+        "after": "Vision & Goal Setting Template"
+      },
+      "description": {
+        "before": [
+          "A Free, Simple, 9-Page PDF Powerful Goal Setting Playbook. Solves for the \"What do I actually want?\" question so central to personal finance."
+        ],
+        "after": "Define what you want and turn it into shared priorities and goals."
+      },
+      "type": {
+        "before": [
+          "PDF"
+        ],
+        "after": "Presentation"
+      },
+      "longDescription": {
+        "before": [
+          "A Free, Simple, 9-Page PDF Powerful Goal Setting Playbook Developed and Used by Scott Trench. This tool can help you and your spouse align on answering the all important \"What do we want?\" question that is so critical to every aspect of personal finance."
+        ],
+        "after": "Work through Scott Trench’s vision and goal-setting prompts to clarify what you want from life and money. Use the editable PowerPoint presentation or make a Google Slides copy to work through it on your own or with your partner."
+      }
+    }
+  },
+  "bp-budget-template-tracker": {
+    "fileNames": [
+      "Personal_Budget_Tracker.xlsx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Personal Budget Template & Tracker"
+        ],
+        "after": "Personal Budget Calculator"
+      },
+      "description": {
+        "before": [
+          "A comprehensive personal budgeting and cash flow tracking template designed to analyze your spending and optimize your savings rate."
+        ],
+        "after": "Compare your income and spending to find room in your budget."
+      },
+      "longDescription": {
+        "before": [
+          "A comprehensive personal budgeting and cash flow tracking template designed specifically for the FI/RE community to analyze your spending, optimize your savings rate, and forecast your journey to financial freedom."
+        ],
+        "after": "Enter your household income and spending to explore your budget and cash flow."
+      },
+      "actionLabel": {
+        "before": [
+          null,
+          "Open Spreadsheet",
+          null
+        ],
+        "after": "Open Calculator"
+      },
+      "type": {
+        "before": [
+          "Web App",
+          "Spreadsheet"
+        ],
+        "after": "Web App"
+      }
+    }
+  },
+  "bp-healthcare-costs-estimator": {
+    "fileNames": [
+      "Healthcare_Costs_Estimator.xlsx"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "Estimate and plan for your post-retirement healthcare costs, insurance premiums, and HSA contribution strategies."
+        ],
+        "after": "Explore healthcare costs before Medicare using your household assumptions."
+      },
+      "longDescription": {
+        "before": [
+          "One of the largest expenses in retirement is medical care. This Healthcare Costs Estimator helps you plan for future premiums, deductibles, out-of-pocket limits, and maximize tax-free growth with HSA strategies."
+        ],
+        "after": "Explore healthcare cost projections before Medicare. Adjust the household assumptions to compare scenarios."
+      },
+      "actionLabel": {
+        "before": [
+          null,
+          "Open Spreadsheet",
+          null
+        ],
+        "after": "Open Calculator"
+      },
+      "type": {
+        "before": [
+          "Web App",
+          "Spreadsheet"
+        ],
+        "after": "Web App"
+      }
+    }
+  },
+  "bp-income-tax-projection": {
+    "fileNames": [
+      "Income_Tax_Projection_Model.xlsx"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "Project your annual income tax liability, calculate effective tax brackets, and optimize tax-loss harvesting or deductions."
+        ],
+        "after": "Estimate your income taxes and compare scenarios using your own assumptions."
+      },
+      "longDescription": {
+        "before": [
+          "Plan ahead and prevent surprises. This Income Tax Projection Calculator helps you estimate your annual tax liability, understand your marginal vs. effective tax brackets, and evaluate options for pre-tax contributions."
+        ],
+        "after": "Explore projected income taxes by adjusting your income and other assumptions. Review the calculator’s tax-year settings when comparing scenarios."
+      },
+      "actionLabel": {
+        "before": [
+          null,
+          "Open Spreadsheet",
+          null
+        ],
+        "after": "Open Calculator"
+      },
+      "type": {
+        "before": [
+          "Web App",
+          "Spreadsheet"
+        ],
+        "after": "Web App"
+      }
+    }
+  },
+  "bp-mortgage-payoff-calculator": {
+    "fileNames": [
+      "Mortgage_Payoff_Amortization_Model.xlsx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Mortgage Payoff & Amortization Calculator"
+        ],
+        "after": "Mortgage Payoff Calculator"
+      },
+      "description": {
+        "before": [
+          "Visualize how extra principal payments accelerate your home payoff date and track interest saved over the life of your loan."
+        ],
+        "after": "See how extra payments change your payoff date and total interest."
+      },
+      "longDescription": {
+        "before": [
+          "Compare the long-term impact of paying down your mortgage early versus investing the difference. Track amortization schedules, extra monthly or annual payments, and discover how many years you can shave off your loan."
+        ],
+        "after": "Compare mortgage repayment scenarios and review how extra principal payments affect the amortization schedule, payoff timing, and total interest."
+      },
+      "actionLabel": {
+        "before": [
+          null,
+          "Open Spreadsheet",
+          null
+        ],
+        "after": "Open Calculator"
+      },
+      "type": {
+        "before": [
+          "Web App",
+          "Spreadsheet"
+        ],
+        "after": "Web App"
+      }
+    }
+  },
+  "bp-mega-backdoor-roth-guide": {
+    "fileNames": [
+      "Mega_Backdoor_Roth_Strategy_Guide.pdf",
+      ""
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Mega Backdoor Roth (Mega Cap) Strategy Guide"
+        ],
+        "after": "Mega-Cap Valuation Workbook"
+      },
+      "description": {
+        "before": [
+          "Master the advanced after-tax 401(k) contribution strategy to supercharge your tax-free retirement savings.",
+          "See how much cash flow growth the prices of mega-cap companies imply. Start with the July 30, 2026 snapshot or enter your own assumptions."
+        ],
+        "after": "Test the growth implied by mega-cap valuations using a dated market snapshot."
+      },
+      "longDescription": {
+        "before": [
+          "An advanced, step-by-step strategy blueprint designed to help high-income earners utilize after-tax 401(k) contributions and in-plan conversions to funnel up to tens of thousands of extra dollars into tax-free Roth accounts annually."
+        ],
+        "after": "What growth would justify these share prices? Start with the workbook’s July 30, 2026 valuation snapshot, then change the inputs to see how the required cash flow growth changes. The starting prices are historical, not live quotes."
+      },
+      "type": {
+        "before": [
+          "PDF"
+        ],
+        "after": "Web App"
+      },
+      "tags": {
+        "before": [
+          [
+            "Projection Models",
+            "High Income"
+          ]
+        ],
+        "after": [
+          "Projection Models"
+        ]
+      }
+    }
+  },
+  "L26iS881ZhPUIqSWTaRc": {
+    "fileNames": [
+      "DEWK_V8.docx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "\"DEWK\" (Dually Employed With Kids) Financial Plan Template"
+        ],
+        "after": "DEWK Family Financial Plan"
+      },
+      "description": {
+        "before": [
+          "A detailed financial plan and template for a household in the \"Middle Class Trap\" - Earning a good income, approaching $1M in net worth, no liquidity."
+        ],
+        "after": "Explore a plan for two working parents with high net worth but limited accessible savings."
+      },
+      "longDescription": {
+        "before": [
+          null
+        ],
+        "after": "A sample financial plan for a dually employed household with kids (DEWK). Use the fictional household’s liquidity-first framework as a starting point for reviewing your own options."
+      }
+    }
+  },
+  "5xMBrAQfaeg217N05xkn": {
+    "fileNames": [
+      "DEWK_FIRE_V_5_8_2026.xlsx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "A Projection Model to Accompany the \"DEWK\" Financial Plan Template"
+        ],
+        "after": "DEWK Financial Projection Model"
+      },
+      "description": {
+        "before": [
+          "A 5 Tab Excel Document that maps the projections of the \"Forks\" discussed in the DEWK Financial Plan Template. "
+        ],
+        "after": "Compare the financial paths in the DEWK family plan with a five-tab Excel model."
+      }
+    }
+  },
+  "3hadxK8aXA6TLQJQVq90": {
+    "fileNames": [
+      "Money Moves Year-End Checklist.pdf"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Money Moves Year-End Checklist"
+        ],
+        "after": "2025 Year-End Money Moves Checklist"
+      },
+      "description": {
+        "before": [
+          "A 2-Page PDF Checklist of Money Moves to Make Before the End of 2025"
+        ],
+        "after": "The previous year-end checklist, kept for reference. A 2026 edition is available."
+      },
+      "longDescription": {
+        "before": [
+          "A 2-Page PDF Checklist of Money Moves to Make Before the End of 2025. Created by Mindy Jensen. "
+        ],
+        "after": "Mindy Jensen’s 2025 year-end checklist. This previous edition is retained for reference; use the 2026 edition for the current checklist."
+      }
+    }
+  },
+  "OokxZVP3ro51xBkSrU5p": {
+    "fileNames": [
+      "2026 UPDATED Money Moves Year-End Checklist.docx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "UPDATED for 2026 Year End Money Moves Checklist"
+        ],
+        "after": "2026 Year-End Money Moves Checklist"
+      },
+      "description": {
+        "before": [
+          "An UPDATED for 2026 checklist of money moves to make before the end of the year. "
+        ],
+        "after": "Review your taxes, investments, benefits, and financial housekeeping before year-end."
+      },
+      "type": {
+        "before": [
+          "Web App"
+        ],
+        "after": "Document"
+      },
+      "longDescription": {
+        "before": [
+          null
+        ],
+        "after": "Work through the updated 2026 checklist covering tax and retirement accounts, investments, spending, insurance, benefits, and financial administration. Download the editable Word document or make a Google Docs copy."
+      }
+    }
+  },
+  "ATwLvSY3GxfhKaT0OXDB": {
+    "fileNames": [
+      "Bucket-List-Builder-Worksheet.pdf"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "A free, fillable 7-page PDF worksheet to build your bucket list, set real dates, and stop waiting for 'someday' to start living it."
+        ],
+        "after": "Turn your bucket list into a plan with priorities, real dates, and next steps."
+      }
+    }
+  },
+  "MnGCiEFCmbax75HQy20L": {
+    "fileNames": [
+      "Financial_Stability_Framework v 3.23.26.docx"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "The Middle Class Family: The Financial Stability Framework"
+        ],
+        "after": "Family Financial Stability Plan"
+      },
+      "description": {
+        "before": [
+          "A straightforward financial plan template designed as a starting point for a middle-class American family. "
+        ],
+        "after": "Start a household financial plan with a practical framework for middle-class families."
+      },
+      "type": {
+        "before": [
+          "PDF"
+        ],
+        "after": "Document"
+      },
+      "longDescription": {
+        "before": [
+          null
+        ],
+        "after": "The Financial Stability Framework is a sample plan for a fictional middle-class household. Use the editable Word document to work through its recommendations, decision points, and checklist."
+      }
+    }
+  },
+  "OTFTrNb2Md3gx2Co1scn": {
+    "fileNames": [
+      "Alternatives to Sequential Drawdown.pdf"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Alternatives to Sequential Drawdown PPT Deck"
+        ],
+        "after": "Alternatives to Sequential Drawdown"
+      },
+      "description": {
+        "before": [
+          "A 17 Page Slide Deck Discussing an Enrolled Agent's (Mark Bakewell) Thoughts on the Benefits of a Blended Drawdown Strategy for Early Retirees."
+        ],
+        "after": "Compare sequential, blended, and cyclical retirement withdrawal approaches."
+      },
+      "tags": {
+        "before": [
+          [
+            "Estate Planning"
+          ]
+        ],
+        "after": [
+          "Retirement Planning"
+        ]
+      },
+      "longDescription": {
+        "before": [
+          null
+        ],
+        "after": "Mark Bakewell’s presentation on alternatives to sequential drawdown, including blended and cyclical approaches. The slide deck is supplied as a PDF."
+      }
+    }
+  },
+  "QnASLbFPLE48vS6UZqsH": {
+    "fileNames": [
+      "Bitcoin's Binary Endgame PDF 2.16.25 Update.pdf"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "Bitcon's Binary Endgame (PDF)"
+        ],
+        "after": "Bitcoin’s Binary Endgame"
+      },
+      "description": {
+        "before": [
+          "A 42 Page \"Whitepaper\" written by Scott Trench discussing Bitcoin's Terminal Security Dynamics"
+        ],
+        "after": "Read Scott Trench’s analysis of Bitcoin’s long-term security incentives."
+      }
+    }
+  },
+  "RCd5VgmhvauAC2fnRTmy": {
+    "fileNames": [
+      "BPM_Investor_Policy_Statement.docx"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "Mindy and Carl's Investor Policy Statement and Template. Download and work through it, beat it up with AI, and run it past your advisor."
+        ],
+        "after": "Write down your investing goals and rules using Mindy and Carl’s example."
+      },
+      "type": {
+        "before": [
+          "PDF"
+        ],
+        "after": "Document"
+      }
+    }
+  },
+  "SPW9zrqKWvGhO1LVhXHJ": {
+    "fileNames": [
+      "BPM_Withdrawal_Frameworks.pptx"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "A 15 Page PPTX presentation that gives a brief overview of 6 competing frameworks that may impact withdrawal decision-making"
+        ],
+        "after": "Compare six frameworks and the tradeoffs behind retirement withdrawal decisions."
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Plan Templates",
+            "Financial Planning Checklists"
+          ]
+        ],
+        "after": [
+          "Retirement Planning"
+        ]
+      }
+    }
+  },
+  "cVIAlLn6rU7pIay6ge4C": {
+    "fileNames": [
+      "BPM Money Date Template.pdf"
+    ],
+    "fields": {
+      "title": {
+        "before": [
+          "BPM Money Date Template"
+        ],
+        "after": "Money Date Template"
+      },
+      "description": {
+        "before": [
+          "A free, 10-page PDF that walks you through having your first (and subsequent) Money Dates, either solo or with your partner"
+        ],
+        "after": "Use a guided money conversation to review your finances, solo or with a partner."
+      }
+    }
+  },
+  "fm5CSMlk66LR3Tgk6xdB": {
+    "fileNames": [
+      ""
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "This checklist walks you through expenses you might be missing, because they come up annually or semi-annually instead of monthly. "
+        ],
+        "after": "Catch annual and occasional expenses that are easy to miss in a monthly budget."
+      },
+      "type": {
+        "before": [
+          "PDF"
+        ],
+        "after": "Document"
+      }
+    }
+  },
+  "jOu2yJcNGXF5azlRgsHO": {
+    "fileNames": [
+      "CEO_Toolkit BP Money.pdf"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "Scott Trench's Operating Manual for Running a Middle Market Company. "
+        ],
+        "after": "Explore Scott Trench’s operating manual for leading a middle-market company."
+      }
+    }
+  },
+  "twaRw8Dh7USwpcJ56bcW": {
+    "fileNames": [
+      "The Ultimate Guide to Decumulation (2026).pdf"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "Master tax-efficient retirement withdrawals. Learn sequential, blended & cyclical strategies to maximize your nest egg and minimize taxes in 2026."
+        ],
+        "after": "Explore retirement portfolio and withdrawal strategies, including their tradeoffs."
+      },
+      "tags": {
+        "before": [
+          [
+            "Estate Planning"
+          ]
+        ],
+        "after": [
+          "Retirement Planning"
+        ]
+      }
+    }
+  },
+  "u1y3YGtNeKLhuzBWX3GG": {
+    "fileNames": [
+      "Roth_Conversion_Window_Worksheet_Fillable.pdf"
+    ],
+    "fields": {
+      "description": {
+        "before": [
+          "Free fillable worksheet to map your Roth conversion window, fund early retirement before 59½, and plan the tax bill without any nasty IRS surprises."
+        ],
+        "after": "Map your Roth conversion window, living expenses, and potential tax costs."
+      }
+    }
+  }
+}

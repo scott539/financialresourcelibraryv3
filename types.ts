@@ -25,6 +25,7 @@ export enum Tag {
   FINANCIAL_PLAN_TEMPLATES = 'Financial Plan Templates',
   FINANCIAL_PLANNING_CHECKLISTS = 'Financial Planning Checklists',
   ESTATE_PLANNING = 'Estate Planning',
+  RETIREMENT_PLANNING = 'Retirement Planning',
   GOAL_SETTING = 'Goal Setting/Visioning',
   MONEY_DATE_TEMPLATE = 'Money Date Template',
 

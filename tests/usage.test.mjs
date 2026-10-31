@@ -37,6 +37,7 @@ const mocks = {
   'google-auth-library':'export class IdentityPoolClient {constructor(options){this.options=options;}}; export class GoogleAuth {constructor(options){this.options=options;}};'
 };
 registerHooks({resolve(spec,ctx,next) {
+  if (spec === './catalogEditions') return next('./catalogEditions.ts',ctx);
   return mocks[spec] ? {url:'data:text/javascript,'+encodeURIComponent(mocks[spec]),shortCircuit:true} : next(spec,ctx);
 }});
 Object.assign(process.env, { BPM_GCP_WIF_PROVIDER:'projects/272224588349/locations/global/workloadIdentityPools/bpm-vercel/providers/vercel', BPM_METRICS_DATABASE:'bpm-resource-metrics',

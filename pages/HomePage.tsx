@@ -1,5 +1,6 @@
 import { isAlias, useUsage } from '../utils/usage';
-import { rankCatalog, selectFeaturedResource } from '../utils/catalogOrder';
+import { isActiveFeature, rankCatalog, selectFeaturedResource } from '../utils/catalogOrder';
+import { currentEdition, yearEndFeatureUntil } from '../utils/catalogEditions';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
@@ -48,7 +49,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
   const [featureCheck, checkFeature] = useState(Date.now);
   const featured = selectFeaturedResource(visibleResources);
   const featuredId = featured?.id;
-  const featuredUntil = featured?.featuredUntil;
+  const featuredUntil = featured && (isActiveFeature(featured) ? featured.featuredUntil : yearEndFeatureUntil);
   useEffect(() => {
     if (!featuredUntil) return;
     const delay = Math.min(Math.max(0, Date.parse(featuredUntil) - Date.now()), 2147483647);
@@ -180,6 +181,9 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
     return rankCatalog(matches, featuredId, rankCounts);
   }, [visibleResources, searchTerm, activeCategory, activeTags, featuredId, rankCounts]);
 
+  const currentResources = filteredResources.filter(resource => !currentEdition(resource, visibleResources));
+  const previousEditions = filteredResources.filter(resource => currentEdition(resource, visibleResources));
+
   // Determine if filters are active
   const hasActiveFilters = useMemo(() => {
     return !!(searchTerm || activeCategory || activeTags.length > 0);
@@ -302,7 +306,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                 className="mt-2 rounded-xl border border-line2 bg-card p-3 sm:p-4"
               >
                 <FilterButtons
-                  resources={visibleResources}
+                  resources={visibleResources.filter(resource => !currentEdition(resource, visibleResources))}
                   activeCategory={activeCategory}
                   activeTags={activeTags}
                   onCategoryChange={setActiveCategory}
@@ -329,7 +333,8 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
               {/* Results Title Bar */}
               <div className="mb-3 flex items-center justify-between">
                 <span aria-live="polite" className="text-xs font-semibold text-ink2">
-                  {filteredResources.length} {filteredResources.length === 1 ? 'resource' : 'resources'}
+                  {currentResources.length} {currentResources.length === 1 ? 'resource' : 'resources'}
+                  {previousEditions.length > 0 && ` · ${previousEditions.length} previous edition`}
                 </span>
                 {hasActiveFilters && (
                   <button
@@ -342,9 +347,9 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
               </div>
 
               {/* Grid Layout - Compact 4-Column on Desktop */}
-              {filteredResources.length > 0 ? (
+              {currentResources.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 auto-rows-fr">
-                  {filteredResources.map((resource) => (
+                  {currentResources.map((resource) => (
                     <ResourceCard 
                       key={resource.id} 
                       resource={resource} 
@@ -354,7 +359,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                     />
                   ))}
                 </div>
-              ) : (
+              ) : previousEditions.length === 0 ? (
                 <div className="text-center py-20 bg-card border border-line2 rounded-3xl shadow-md max-w-md mx-auto p-8">
                   <div className="h-16 w-16 rounded-2xl bg-paper border border-line flex items-center justify-center mx-auto mb-5 text-ink2 shadow-inner font-mono text-xl font-bold">
                     ?
@@ -368,6 +373,18 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                     Reset Search & Filters
                   </button>
                 </div>
+              ) : null}
+              {previousEditions.length > 0 && (
+                <details className="mt-8 border-t border-line2 pt-4" open={searchTerm.trim() ? true : undefined}>
+                  <summary className="cursor-pointer text-sm font-semibold text-ink2">Previous editions ({previousEditions.length})</summary>
+                  <p className="mt-2 mb-4 text-sm text-ink2">Retained for reference, with their original files and download history.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    {previousEditions.map(resource => (
+                      <ResourceCard key={resource.id} resource={resource} featured={false}
+                        onDownloadClick={handleDownloadClick} onGoogleDriveClick={handleGoogleDriveClick} />
+                    ))}
+                  </div>
+                </details>
               )}
             </div>
         </div>
