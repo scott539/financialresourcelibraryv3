@@ -1,5 +1,6 @@
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 import { applyCatalogEditorial } from './catalogEditorial';
+import { applyCatalogImage } from './catalogImages';
 
 // Retain the original ID so existing preview and embed links keep working.
 const megaCapWorkbook = {
@@ -121,7 +122,7 @@ export const STATIC_RESOURCES: Resource[] = [
 // Firestore records take precedence over the seed. Correct only the known
 // legacy values on read; never re-seed an existing document or reset its views.
 export function correctLegacyCatalogMetadata(resource: Resource): Resource {
-  return correctEarlierMetadata(applyCatalogEditorial(resource));
+  return applyCatalogImage(correctEarlierMetadata(applyCatalogEditorial(resource)));
 }
 
 function correctEarlierMetadata(resource: Resource): Resource {

@@ -98,7 +98,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           <img 
             src={imageUrl} 
             alt={title} 
-            className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-500 ease-out"
+            className="w-full h-full object-contain transition-transform duration-500 ease-out"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-black/5 pointer-events-none" />

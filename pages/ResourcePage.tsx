@@ -221,7 +221,7 @@ const ResourcePage: React.FC<ResourcePageProps> = ({ resources, onDownload }) =>
           <div>
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">{resource.category}</span>
             <h1 className="text-4xl font-extrabold text-slate mt-2 mb-4">{resource.title}</h1>
-            <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-square object-cover rounded-lg shadow-lg mb-6" />
+            <img src={resource.imageUrl} alt={resource.title} className="w-full aspect-[16/9] object-contain bg-slate-50 rounded-lg shadow-lg mb-6" />
              <div className="mb-6 flex flex-wrap gap-2">
                 {(resource.tags || []).map(tag => (
                   <span key={tag} className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-primary bg-secondary/30">
