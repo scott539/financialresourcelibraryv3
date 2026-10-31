@@ -1,4 +1,4 @@
-declare global { const __BPM_PREVIEW__: boolean; }
+declare global { const __BPM_KIT_GATE_PREVIEW__: boolean; const __BPM_PREVIEW__: boolean; }
 
 
 export enum ResourceType {
