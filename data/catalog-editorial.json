@@ -15,6 +15,21 @@
           "A Personal Financial Statement Spreadsheet (.xlsx) specifically highlighting and breaking out a \"Financial\" or \"FIRE\" portfolio from other assets."
         ],
         "after": "See your net worth, cash flow, and FI/RE portfolio in one spreadsheet."
+      },
+      "tags": {
+        "before": [
+          [
+            "Personal Financial Statements",
+            "Calculators"
+          ]
+        ],
+        "after": [
+          "Personal Financial Statements",
+          "Calculators",
+          "Budgeting & Cash Flow",
+          "Retirement Planning",
+          "Investing"
+        ]
       }
     }
   },
@@ -46,6 +61,17 @@
           "A Free, Simple, 9-Page PDF Powerful Goal Setting Playbook Developed and Used by Scott Trench. This tool can help you and your spouse align on answering the all important \"What do we want?\" question that is so critical to every aspect of personal finance."
         ],
         "after": "Work through Scott Trench’s vision and goal-setting prompts to clarify what you want from life and money. Use the editable PowerPoint presentation or make a Google Slides copy to work through it on your own or with your partner."
+      },
+      "tags": {
+        "before": [
+          [
+            "Goal Setting/Visioning"
+          ]
+        ],
+        "after": [
+          "Goal Setting/Visioning",
+          "Families"
+        ]
       }
     }
   },
@@ -56,21 +82,24 @@
     "fields": {
       "title": {
         "before": [
-          "Personal Budget Template & Tracker"
+          "Personal Budget Template & Tracker",
+          "Personal Budget Calculator"
         ],
-        "after": "Personal Budget Calculator"
+        "after": "Household Spending Comparison Tool"
       },
       "description": {
         "before": [
-          "A comprehensive personal budgeting and cash flow tracking template designed to analyze your spending and optimize your savings rate."
+          "A comprehensive personal budgeting and cash flow tracking template designed to analyze your spending and optimize your savings rate.",
+          "Compare your income and spending to find room in your budget."
         ],
-        "after": "Compare your income and spending to find room in your budget."
+        "after": "Compare spending with households like yours by income, household size, age, and location."
       },
       "longDescription": {
         "before": [
-          "A comprehensive personal budgeting and cash flow tracking template designed specifically for the FI/RE community to analyze your spending, optimize your savings rate, and forecast your journey to financial freedom."
+          "A comprehensive personal budgeting and cash flow tracking template designed specifically for the FI/RE community to analyze your spending, optimize your savings rate, and forecast your journey to financial freedom.",
+          "Enter your household income and spending to explore your budget and cash flow."
         ],
-        "after": "Enter your household income and spending to explore your budget and cash flow."
+        "after": "See how your spending compares with statistically similar U.S. households. Choose your income group, household size, age, and location, then compare categories against peer benchmarks. Housing shows local market rent as a separate reference. These benchmarks describe spending patterns, not recommended spending targets."
       },
       "actionLabel": {
         "before": [
@@ -86,6 +115,19 @@
           "Spreadsheet"
         ],
         "after": "Web App"
+      },
+      "tags": {
+        "before": [
+          [
+            "Calculators",
+            "Goal Setting/Visioning"
+          ]
+        ],
+        "after": [
+          "Calculators",
+          "Budgeting & Cash Flow",
+          "Families"
+        ]
       }
     }
   },
@@ -120,6 +162,20 @@
           "Spreadsheet"
         ],
         "after": "Web App"
+      },
+      "tags": {
+        "before": [
+          [
+            "Calculators",
+            "Projection Models"
+          ]
+        ],
+        "after": [
+          "Calculators",
+          "Projection Models",
+          "Healthcare",
+          "Retirement Planning"
+        ]
       }
     }
   },
@@ -154,6 +210,19 @@
           "Spreadsheet"
         ],
         "after": "Web App"
+      },
+      "tags": {
+        "before": [
+          [
+            "Calculators",
+            "Projection Models"
+          ]
+        ],
+        "after": [
+          "Calculators",
+          "Projection Models",
+          "Tax Planning"
+        ]
       }
     }
   },
@@ -194,6 +263,17 @@
           "Spreadsheet"
         ],
         "after": "Web App"
+      },
+      "tags": {
+        "before": [
+          [
+            "Calculators"
+          ]
+        ],
+        "after": [
+          "Calculators",
+          "Budgeting & Cash Flow"
+        ]
       }
     }
   },
@@ -233,10 +313,14 @@
           [
             "Projection Models",
             "High Income"
+          ],
+          [
+            "Projection Models"
           ]
         ],
         "after": [
-          "Projection Models"
+          "Projection Models",
+          "Investing"
         ]
       }
     }
@@ -263,6 +347,24 @@
           null
         ],
         "after": "A sample financial plan for a dually employed household with kids (DEWK). Use the fictional household’s liquidity-first framework as a starting point for reviewing your own options."
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Plan Templates",
+            "Families",
+            "High Income",
+            "Middle Income"
+          ]
+        ],
+        "after": [
+          "Financial Plan Templates",
+          "Families",
+          "High Income",
+          "Middle Income",
+          "Budgeting & Cash Flow",
+          "Retirement Planning"
+        ]
       }
     }
   },
@@ -282,6 +384,21 @@
           "A 5 Tab Excel Document that maps the projections of the \"Forks\" discussed in the DEWK Financial Plan Template. "
         ],
         "after": "Compare the financial paths in the DEWK family plan with a five-tab Excel model."
+      },
+      "tags": {
+        "before": [
+          [
+            "Projection Models",
+            "Financial Plan Templates"
+          ]
+        ],
+        "after": [
+          "Projection Models",
+          "Financial Plan Templates",
+          "Budgeting & Cash Flow",
+          "Retirement Planning",
+          "Families"
+        ]
       }
     }
   },
@@ -307,6 +424,20 @@
           "A 2-Page PDF Checklist of Money Moves to Make Before the End of 2025. Created by Mindy Jensen. "
         ],
         "after": "Mindy Jensen’s 2025 year-end checklist. This previous edition is retained for reference; use the 2026 edition for the current checklist."
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Planning Checklists"
+          ]
+        ],
+        "after": [
+          "Financial Planning Checklists",
+          "Tax Planning",
+          "Retirement Planning",
+          "Investing",
+          "Budgeting & Cash Flow"
+        ]
       }
     }
   },
@@ -338,6 +469,20 @@
           null
         ],
         "after": "Work through the updated 2026 checklist covering tax and retirement accounts, investments, spending, insurance, benefits, and financial administration. Download the editable Word document or make a Google Docs copy."
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Planning Checklists"
+          ]
+        ],
+        "after": [
+          "Financial Planning Checklists",
+          "Tax Planning",
+          "Retirement Planning",
+          "Investing",
+          "Budgeting & Cash Flow"
+        ]
       }
     }
   },
@@ -351,6 +496,20 @@
           "A free, fillable 7-page PDF worksheet to build your bucket list, set real dates, and stop waiting for 'someday' to start living it."
         ],
         "after": "Turn your bucket list into a plan with priorities, real dates, and next steps."
+      },
+      "tags": {
+        "before": [
+          [
+            "Goal Setting/Visioning",
+            "Families",
+            "High Income",
+            "Low Income",
+            "Middle Income"
+          ]
+        ],
+        "after": [
+          "Goal Setting/Visioning"
+        ]
       }
     }
   },
@@ -382,6 +541,24 @@
           null
         ],
         "after": "The Financial Stability Framework is a sample plan for a fictional middle-class household. Use the editable Word document to work through its recommendations, decision points, and checklist."
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Plan Templates",
+            "Families",
+            "Middle Income",
+            "MCOL (Medium Cost of Living)"
+          ]
+        ],
+        "after": [
+          "Financial Plan Templates",
+          "Families",
+          "Middle Income",
+          "MCOL (Medium Cost of Living)",
+          "Budgeting & Cash Flow",
+          "Retirement Planning"
+        ]
       }
     }
   },
@@ -406,10 +583,14 @@
         "before": [
           [
             "Estate Planning"
+          ],
+          [
+            "Retirement Planning"
           ]
         ],
         "after": [
-          "Retirement Planning"
+          "Retirement Planning",
+          "Tax Planning"
         ]
       },
       "longDescription": {
@@ -436,6 +617,14 @@
           "A 42 Page \"Whitepaper\" written by Scott Trench discussing Bitcoin's Terminal Security Dynamics"
         ],
         "after": "Read Scott Trench’s analysis of Bitcoin’s long-term security incentives."
+      },
+      "tags": {
+        "before": [
+          []
+        ],
+        "after": [
+          "Investing"
+        ]
       }
     }
   },
@@ -455,6 +644,20 @@
           "PDF"
         ],
         "after": "Document"
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Plan Templates",
+            "Financial Planning Checklists"
+          ]
+        ],
+        "after": [
+          "Financial Plan Templates",
+          "Financial Planning Checklists",
+          "Investing",
+          "Goal Setting/Visioning"
+        ]
       }
     }
   },
@@ -474,10 +677,16 @@
           [
             "Financial Plan Templates",
             "Financial Planning Checklists"
+          ],
+          [
+            "Retirement Planning"
           ]
         ],
         "after": [
-          "Retirement Planning"
+          "Retirement Planning",
+          "Tax Planning",
+          "Healthcare",
+          "Investing"
         ]
       }
     }
@@ -498,6 +707,19 @@
           "A free, 10-page PDF that walks you through having your first (and subsequent) Money Dates, either solo or with your partner"
         ],
         "after": "Use a guided money conversation to review your finances, solo or with a partner."
+      },
+      "tags": {
+        "before": [
+          [
+            "Money Date Template"
+          ]
+        ],
+        "after": [
+          "Money Date Template",
+          "Budgeting & Cash Flow",
+          "Goal Setting/Visioning",
+          "Families"
+        ]
       }
     }
   },
@@ -517,6 +739,17 @@
           "PDF"
         ],
         "after": "Document"
+      },
+      "tags": {
+        "before": [
+          [
+            "Financial Planning Checklists"
+          ]
+        ],
+        "after": [
+          "Financial Planning Checklists",
+          "Budgeting & Cash Flow"
+        ]
       }
     }
   },
@@ -530,6 +763,14 @@
           "Scott Trench's Operating Manual for Running a Middle Market Company. "
         ],
         "after": "Explore Scott Trench’s operating manual for leading a middle-market company."
+      },
+      "tags": {
+        "before": [
+          []
+        ],
+        "after": [
+          "Business & Leadership"
+        ]
       }
     }
   },
@@ -548,10 +789,15 @@
         "before": [
           [
             "Estate Planning"
+          ],
+          [
+            "Retirement Planning"
           ]
         ],
         "after": [
-          "Retirement Planning"
+          "Retirement Planning",
+          "Tax Planning",
+          "Investing"
         ]
       }
     }
@@ -566,6 +812,15 @@
           "Free fillable worksheet to map your Roth conversion window, fund early retirement before 59½, and plan the tax bill without any nasty IRS surprises."
         ],
         "after": "Map your Roth conversion window, living expenses, and potential tax costs."
+      },
+      "tags": {
+        "before": [
+          []
+        ],
+        "after": [
+          "Retirement Planning",
+          "Tax Planning"
+        ]
       }
     }
   }

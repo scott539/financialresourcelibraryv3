@@ -1,10 +1,11 @@
 import { currentEdition } from '../utils/catalogEditions';
+import { libraryReturnPath } from '../utils/libraryQuery';
 import { selectFeaturedResource } from '../utils/catalogOrder';
 import { resourceFormat } from '../data/catalogEditorial';
 import ResourceActions from '../components/ResourceActions';
 import { canonicalId, isAlias, usageLabel, useUsage } from '../utils/usage';
 import React, { useState, useEffect } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, useLocation, Navigate, Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
 import { DownloadIcon, LinkIcon, PdfIcon, SpreadsheetIcon, DocumentIcon, PresentationIcon, ImageIcon, VideoIcon, AudioIcon } from '../components/icons';
 import DownloadModal from '../components/DownloadModal';
@@ -31,8 +32,9 @@ const formatDate = (timestamp: any): string | null => {
 
 const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, onDownload, onGoogleDriveClick }) => {
   const usage = useUsage();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  
+
   // Find in state resources first, with fallback to static resources to avoid deep-link routing bails
   const resource = resources.find(r => r.id === id) || STATIC_RESOURCES.find(r => r.id === id);
 
@@ -44,7 +46,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
     window.scrollTo(0, 0);
   }, [id]);
 
-  if (id && isAlias(id)) return <Navigate to={'/preview/' + canonicalId(id)} replace />;
+  if (id && isAlias(id)) return <Navigate to={'/preview/' + canonicalId(id) + location.search} replace />;
   if (!resource) {
     if (resources.length === 0) {
       return (
@@ -56,7 +58,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
         </div>
       );
     }
-    return <Navigate to="/" />;
+    return <Navigate to={libraryReturnPath(location.search)} />;
   }
 
   const handleDownloadClick = () => {
@@ -162,8 +164,8 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
     <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12">
       {/* Navigation Breadcrumb */}
       <div className="mb-8">
-        <Link 
-          to="/" 
+        <Link
+          to={libraryReturnPath(location.search)}
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-primary transition-colors group"
         >
           <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -176,24 +178,24 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
       {replacement && (
         <aside className="mb-6 rounded-xl border border-line bg-card p-4 text-sm text-ink2">
           This is a previous edition.{' '}
-          <Link to={`/preview/${replacement.id}`} className="font-semibold text-primary underline">View the 2026 checklist</Link>
+          <Link to={`/preview/${replacement.id}${location.search}`} className="font-semibold text-primary underline">View the 2026 checklist</Link>
           . The original file and its download history remain available below.
         </aside>
       )}
       <div className="bg-white border border-line2 rounded-3xl shadow-sm hover:shadow-md transition-all duration-350 overflow-hidden p-6 sm:p-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-            
+
             {/* Left Column: Premium Preview Card / Image */}
             <div className="lg:col-span-5 w-full">
               <div className="relative aspect-[16/10] bg-slate-50 border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex items-center justify-center">
-                <img 
-                  src={resource.imageUrl} 
-                  alt={resource.title} 
+                <img
+                  src={resource.imageUrl}
+                  alt={resource.title}
                   className="w-full h-full object-contain p-4 rounded-2xl"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
-                
+
                 {/* Feature/Status badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                   {isFeatured && (
@@ -257,8 +259,8 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Topic Tags</h4>
                   <div className="flex flex-wrap gap-2">
                     {resource.tags.map(tag => (
-                      <span 
-                        key={tag} 
+                      <span
+                        key={tag}
                         className="text-xs font-bold tracking-wide py-1.5 px-4 uppercase rounded-xl text-primary bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-colors"
                       >
                         {tag}

@@ -18,6 +18,11 @@ export enum MainCategory {
 }
 
 export enum Tag {
+  BUDGETING = 'Budgeting & Cash Flow',
+  TAX_PLANNING = 'Tax Planning',
+  HEALTHCARE = 'Healthcare',
+  INVESTING = 'Investing',
+  BUSINESS = 'Business & Leadership',
   // DIY Personal Finance Toolkit Tags
   CALCULATORS = 'Calculators',
   FINANCIAL_STATEMENTS = 'Personal Financial Statements',

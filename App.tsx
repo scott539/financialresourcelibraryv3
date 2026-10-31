@@ -224,7 +224,7 @@ const AppContent: React.FC = () => {
     );
   };
 
-  const isChromeHidden = isEmbedMode || (isEmbedded && !isDevelopmentOrPreview() && (location.pathname === '/' || location.pathname === '' || location.pathname === '/privacy') && !showManage);
+  const isChromeHidden = isEmbedMode || (isEmbedded && !isDevelopmentOrPreview() && (location.pathname === '/' || location.pathname === '' || location.pathname === '/privacy' || location.pathname.startsWith('/preview/')) && !showManage);
 
   if ((isLoading && isInitialLoad) || isAuthLoading) {
     return (

@@ -1,6 +1,9 @@
 import { isAlias, useUsage } from '../utils/usage';
 import { isActiveFeature, rankCatalog, selectFeaturedResource } from '../utils/catalogOrder';
 import { currentEdition, yearEndFeatureUntil } from '../utils/catalogEditions';
+import { scoreResource } from '../utils/catalogSearch';
+import { readLibraryQuery } from '../utils/libraryQuery';
+import { useSearchParams } from 'react-router-dom';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Resource, ResourceType, MainCategory, Tag } from '../types';
 import SearchBar from '../components/SearchBar';
@@ -18,17 +21,29 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriveClick, showManage }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<MainCategory | null>(null);
-  const [activeTags, setActiveTags] = useState<Tag[]>([]);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const { searchTerm, activeCategory, activeFormat, activeTags, filtersOpen } = useMemo(() => readLibraryQuery(params), [params]);
+  const updateQuery = (values: Record<string, string | string[] | null>) => {
+    setParams(previous => {
+      const next = new URLSearchParams(previous);
+      for (const [key, value] of Object.entries(values)) {
+        next.delete(key);
+        for (const item of Array.isArray(value) ? value : value ? [value] : []) next.append(key, item);
+      }
+      return next;
+    }, { replace: true });
+  };
+  const setSearchTerm = (value: string) => updateQuery({ q: value || null });
+  const setActiveCategory = (value: MainCategory | null) => updateQuery({ collection: value === MainCategory.PLANS ? 'plans' : null });
+  const setActiveFormat = (value: ResourceType | null) => updateQuery({ format: value });
+  const setFiltersOpen = (value: React.SetStateAction<boolean>) => updateQuery({ filters: (typeof value === 'function' ? value(filtersOpen) : value) ? 'open' : null });
   const filterToggle = useRef<HTMLButtonElement>(null);
-  const filterCount = activeTags.length + (activeCategory ? 1 : 0);
+  const filterCount = activeTags.length + (activeCategory ? 1 : 0) + (activeFormat ? 1 : 0);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const usage = useUsage();
-  const rankKey = JSON.stringify([searchTerm, activeCategory, activeTags, usage.live]);
+  const rankKey = JSON.stringify([searchTerm, activeCategory, activeFormat, activeTags, usage.live]);
   const scores = usage.rankCounts ?? usage.counts;
   const ranks = useRef({ key: rankKey, counts: scores });
   if (ranks.current.key !== rankKey) ranks.current = { key: rankKey, counts: scores };
@@ -57,117 +72,10 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
     return () => window.clearTimeout(timer);
   }, [featuredUntil, featureCheck]);
 
-  // Unified filter engine matching title, description, tags, type, or category with smart relevancy scoring
+  // Match every query term; use relevance for searches and the approved order for browsing.
   const filteredResources = useMemo(() => {
     const matches = visibleResources
-      .map(resource => {
-        let score = 0;
-        const query = searchTerm.toLowerCase().trim();
-        const searchWords = query.split(/\s+/).filter(Boolean);
-
-        if (searchWords.length > 0) {
-          const titleLower = (resource.title || '').toLowerCase();
-          const descLower = (resource.description || '').toLowerCase();
-          const typeLower = (resource.type || '').toLowerCase();
-          const categoryLower = (resource.category || '').toLowerCase();
-          const tagsLower = (resource.tags || []).map(t => t.toLowerCase());
-
-          // Base Keyword Scoring
-          let matchesAllWords = true;
-          for (const word of searchWords) {
-            let matchedWord = false;
-            
-            if (titleLower.includes(word)) {
-              matchedWord = true;
-              if (titleLower === word) {
-                score += 50;
-              } else if (titleLower.startsWith(word)) {
-                score += 30;
-              } else {
-                score += 20;
-              }
-            }
-            if (tagsLower.some(t => t.includes(word))) {
-              matchedWord = true;
-              score += 15;
-            }
-            if (descLower.includes(word)) {
-              matchedWord = true;
-              score += 8;
-            }
-            if (typeLower.includes(word)) {
-              matchedWord = true;
-              score += 10;
-            }
-            if (categoryLower.includes(word)) {
-              matchedWord = true;
-              score += 5;
-            }
-
-            if (!matchedWord) {
-              matchesAllWords = false;
-            }
-          }
-
-          // If it matches search words or synonyms, we can proceed
-          if (!matchesAllWords) {
-            // Check synonym fallback/intent match before completely discarding
-            const isPfsSearch = ['pfs', 'personal financial', 'financial statement', 'statement', 'balance sheet', 'net worth', 'networth'].some(term => query.includes(term));
-            const isPfsResource = titleLower.includes('personal financial statement');
-            
-            const isSpreadsheetSearch = ['sheet', 'sheets', 'excel', 'xlsx', 'xls', 'spreadsheet', 'spreadsheets', 'app', 'webapp', 'web app'].some(term => query.includes(term));
-            const isSpreadsheetResource = resource.type === ResourceType.WEB_APP || (resource.type as any) === 'Spreadsheet';
-
-            const isPdfSearch = ['pdf', 'guide', 'ebook', 'booklet', 'checklist', 'document'].some(term => query.includes(term));
-            const isPdfResource = resource.type === 'PDF';
-
-            if ((isPfsSearch && isPfsResource) || (isSpreadsheetSearch && isSpreadsheetResource) || (isPdfSearch && isPdfResource)) {
-              score += 10;
-            } else {
-              return { resource, score: -1 };
-            }
-          }
-
-          // Synonym / Intent Boosts
-          if (['pfs', 'personal financial', 'financial statement', 'statement', 'balance sheet', 'net worth', 'networth'].some(term => query.includes(term))) {
-            if (titleLower.includes('personal financial statement')) {
-              score += 100;
-            }
-          }
-          if (['sheet', 'sheets', 'excel', 'xlsx', 'xls', 'spreadsheet', 'spreadsheets', 'app', 'webapp', 'web app'].some(term => query.includes(term))) {
-            if (resource.type === ResourceType.WEB_APP || (resource.type as any) === 'Spreadsheet') {
-              score += 25;
-            }
-          }
-          if (['pdf', 'guide', 'ebook', 'booklet', 'checklist', 'document'].some(term => query.includes(term))) {
-            if (resource.type === 'PDF') {
-              score += 25;
-            }
-          }
-          if (['tax', 'taxes', 'irs', 'bracket', 'brackets'].some(term => query.includes(term))) {
-            if (titleLower.includes('tax') || descLower.includes('tax')) {
-              score += 30;
-            }
-          }
-          if (['budget', 'spend', 'saving', 'savings', 'expense', 'expenses', 'cashflow', 'cash flow'].some(term => query.includes(term))) {
-            if (titleLower.includes('budget') || descLower.includes('budget') || titleLower.includes('cash flow')) {
-              score += 30;
-            }
-          }
-          if (['retire', 'retirement', 'fire', 'fi', 'independence'].some(term => query.includes(term))) {
-            if (titleLower.includes('retirement') || descLower.includes('retirement') || titleLower.includes('freedom')) {
-              score += 30;
-            }
-          }
-          if (['mortgage', 'loan', 'payoff', 'amortization', 'house', 'home'].some(term => query.includes(term))) {
-            if (titleLower.includes('mortgage') || descLower.includes('mortgage') || titleLower.includes('payoff')) {
-              score += 30;
-            }
-          }
-        }
-
-        return { resource, score };
-      })
+      .map(resource => ({ resource, score: scoreResource(resource, searchTerm) }))
       .filter(({ resource, score }) => {
         if (searchTerm && score < 0) return false;
 
@@ -176,31 +84,25 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
           ? activeTags.every(tag => (resource.tags || []).includes(tag))
           : true;
 
-        return matchesCategory && matchesTags;
+        return matchesCategory && matchesTags && (!activeFormat || resource.type === activeFormat);
       });
-    return rankCatalog(matches, featuredId, rankCounts);
-  }, [visibleResources, searchTerm, activeCategory, activeTags, featuredId, rankCounts]);
+    return rankCatalog(matches, featuredId, rankCounts, Boolean(searchTerm.trim()));
+  }, [visibleResources, searchTerm, activeCategory, activeFormat, activeTags, featuredId, rankCounts]);
 
   const currentResources = filteredResources.filter(resource => !currentEdition(resource, visibleResources));
   const previousEditions = filteredResources.filter(resource => currentEdition(resource, visibleResources));
 
   // Determine if filters are active
   const hasActiveFilters = useMemo(() => {
-    return !!(searchTerm || activeCategory || activeTags.length > 0);
-  }, [searchTerm, activeCategory, activeTags]);
+    return !!(searchTerm || activeCategory || activeFormat || activeTags.length > 0);
+  }, [searchTerm, activeCategory, activeFormat, activeTags]);
 
   const handleTagToggle = (tag: Tag) => {
-    setActiveTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
+    updateQuery({ topic: activeTags.includes(tag) ? activeTags.filter(t => t !== tag) : [...activeTags, tag] });
   };
 
   const handleClearFilters = () => {
-    setActiveCategory(null);
-    setActiveTags([]);
-    setSearchTerm('');
+    updateQuery({ q: null, collection: null, format: null, topic: null });
   };
 
   const [modalActionType, setModalActionType] = useState<'download' | 'gdrive'>('download');
@@ -309,6 +211,8 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
                   resources={visibleResources.filter(resource => !currentEdition(resource, visibleResources))}
                   activeCategory={activeCategory}
                   activeTags={activeTags}
+                  activeFormat={activeFormat}
+                  onFormatChange={setActiveFormat}
                   onCategoryChange={setActiveCategory}
                   onTagToggle={handleTagToggle}
                 />
@@ -348,7 +252,7 @@ const HomePage: React.FC<HomePageProps> = ({ resources, onDownload, onGoogleDriv
 
               {/* Grid Layout - Compact 4-Column on Desktop */}
               {currentResources.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 auto-rows-fr">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 sm:auto-rows-fr">
                   {currentResources.map((resource) => (
                     <ResourceCard 
                       key={resource.id} 
