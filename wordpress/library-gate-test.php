@@ -5,7 +5,8 @@
  * Disable this one snippet to remove the test screen and revoke all test grants.
  * Requires the existing, connected Kit plugin. No credentials are copied.
  */
-if (!defined('ABSPATH') || class_exists('BPM_Library_Gate_Test')) { return; }
+if (!defined('ABSPATH')) { return; }
+if (!class_exists('BPM_Library_Gate_Test')) {
 final class BPM_Library_Gate_Test {
     const COOKIE = '__Host-bpm_library_test';
     const OPTION = 'bpm_library_gate_test_config';
@@ -200,3 +201,5 @@ final class BPM_Library_Gate_Test {
     }
 }
 BPM_Library_Gate_Test::boot();
+
+}
