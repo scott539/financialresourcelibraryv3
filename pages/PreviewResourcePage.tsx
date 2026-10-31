@@ -1,4 +1,8 @@
-import { canonicalId, isAlias, usageLabel, useUsage, directAction } from '../utils/usage';
+import { currentEdition } from '../utils/catalogEditions';
+import { selectFeaturedResource } from '../utils/catalogOrder';
+import { resourceFormat } from '../data/catalogEditorial';
+import ResourceActions from '../components/ResourceActions';
+import { canonicalId, isAlias, usageLabel, useUsage } from '../utils/usage';
 import React, { useState, useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { Resource, ResourceType } from '../types';
@@ -23,18 +27,6 @@ const formatDate = (timestamp: any): string | null => {
     day: 'numeric',
     year: 'numeric',
   }).format(date);
-};
-
-// Returns a sensible default button label based on the resource's file type.
-const getOpenLabel = (type: ResourceType): string => {
-  switch (type) {
-    case ResourceType.PDF: return 'Read Guide';
-    case ResourceType.SPREADSHEET: return 'Open Spreadsheet';
-    case ResourceType.PRESENTATION: return 'Open Presentation';
-    case ResourceType.DOCUMENT: return 'Open Document';
-    case ResourceType.WEB_APP: return 'Open Tool';
-    default: return 'Open Resource';
-  }
 };
 
 const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, onDownload, onGoogleDriveClick }) => {
@@ -163,6 +155,8 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
 
   const theme = getTypeTheme();
   const lastUpdated = formatDate(resource.updatedAt);
+  const replacement = currentEdition(resource, resources);
+  const isFeatured = selectFeaturedResource(resources)?.id === resource.id;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12">
@@ -179,6 +173,13 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
         </Link>
       </div>
 
+      {replacement && (
+        <aside className="mb-6 rounded-xl border border-line bg-card p-4 text-sm text-ink2">
+          This is a previous edition.{' '}
+          <Link to={`/preview/${replacement.id}`} className="font-semibold text-primary underline">View the 2026 checklist</Link>
+          . The original file and its download history remain available below.
+        </aside>
+      )}
       <div className="bg-white border border-line2 rounded-3xl shadow-sm hover:shadow-md transition-all duration-350 overflow-hidden p-6 sm:p-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
             
@@ -195,7 +196,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
                 
                 {/* Feature/Status badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                  {resource.isFeatured && (!resource.featuredUntil || new Date(resource.featuredUntil) > new Date()) && (
+                  {isFeatured && (
                     <span className="bg-primary/95 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg shadow-sm">
                       Featured Resource
                     </span>
@@ -224,7 +225,7 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${theme.bg}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${theme.dot}`} />
-                  {resource.type}
+                  {resourceFormat(resource)}
                 </span>
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   {resource.category}
@@ -268,52 +269,8 @@ const PreviewResourcePage: React.FC<PreviewResourcePageProps> = ({ resources, on
               )}
 
               {/* Action Buttons Section */}
-              <div className="mt-auto border-t border-slate-100 pt-6 flex flex-col sm:flex-row gap-4">
-                {resource.isOpenDirectly ? (
-                  <a
-                    href={resource.googleDriveUrl || resource.fileUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      directAction(e.currentTarget, resource.id);
-                      handleDownloadClick();
-                    }}
-                    className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-6 py-3.5 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-350 cursor-pointer active:scale-[0.98] font-bold text-sm uppercase tracking-wider"
-                    title={resource.actionLabel || getOpenLabel(resource.type)}
-                  >
-                    <LinkIcon className="w-4 h-4 text-white" />
-                    <span>{resource.actionLabel || getOpenLabel(resource.type)}</span>
-                  </a>
-                ) : (
-                  <>
-                    {resource.googleDriveUrl && (
-                      <a
-                        href={resource.googleDriveUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={handleGoogleDriveClick}
-                        className="flex-1 text-center bg-white text-slate-700 hover:text-primary hover:border-primary/40 border border-slate-200 px-6 py-3.5 rounded-2xl shadow-sm flex items-center justify-center gap-2.5 transition-all duration-350 active:scale-[0.98] font-bold text-sm uppercase tracking-wider cursor-pointer"
-                        title="Open in Google Drive"
-                      >
-                        <LinkIcon className="w-4 h-4 text-slate-400" />
-                        <span>Google Drive Link</span>
-                      </a>
-                    )}
-                    <a
-                      href="#open-download"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleDownloadClick();
-                      }}
-                      className="flex-1 text-center bg-primary hover:bg-primary-dark text-white px-6 py-3.5 rounded-2xl shadow-md flex items-center justify-center gap-2.5 transition-all duration-350 cursor-pointer active:scale-[0.98] font-bold text-sm uppercase tracking-wider"
-                      title={resource.isComingSoon ? 'Notify Me' : 'Download File'}
-                    >
-                      <DownloadIcon className="w-4 h-4" />
-                      <span>{resource.isComingSoon ? 'Notify Me' : 'Download Now'}</span>
-                    </a>
-                  </>
-                )}
+              <div className="mt-auto border-t border-slate-100 pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ResourceActions resource={resource} onDownloadClick={() => handleDownloadClick()} onGoogleDriveClick={(_resource, event) => handleGoogleDriveClick(event)} />
               </div>
 
             </div>

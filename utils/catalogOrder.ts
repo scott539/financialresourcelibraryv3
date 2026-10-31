@@ -1,4 +1,5 @@
 import type { Resource } from '../types';
+import { seasonalFeature } from './catalogEditions';
 
 const pinnedIds = ['0y425w6qfHCnOnTfd0JC', 'bk9wPWkAao5xzusob9c6'] as const;
 
@@ -11,7 +12,7 @@ export function isActiveFeature(resource: Pick<Resource, 'isFeatured' | 'feature
 export function selectFeaturedResource(resources: Resource[], now = Date.now()) {
   const expiry = (resource: Resource) => resource.featuredUntil ? Date.parse(resource.featuredUntil) : Infinity;
   return resources.filter(resource => !resource.isHidden && isActiveFeature(resource, now))
-    .sort((a, b) => expiry(b) - expiry(a) || a.id.localeCompare(b.id))[0];
+    .sort((a, b) => expiry(b) - expiry(a) || a.id.localeCompare(b.id))[0] ?? seasonalFeature(resources, now);
 }
 
 export function rankCatalog(matches: { resource: Resource; score: number }[], featuredId: string | undefined,
