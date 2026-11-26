@@ -13,7 +13,7 @@ interface DownloadModalProps {
   actionType?: 'download' | 'gdrive';
 }
 
-const CONVERTKIT_FORM_ID = '2f902835bb';
+const CONVERTKIT_FORM_ID = '663c3a5c89'; // Kit "Nav Bar Signup", form id 8946340
 const CONVERTKIT_SUBMIT_URL = `https://app.convertkit.com/html_forms/${CONVERTKIT_FORM_ID}/subscriptions`;
 
 const DownloadModal: React.FC<DownloadModalProps> = ({ 
