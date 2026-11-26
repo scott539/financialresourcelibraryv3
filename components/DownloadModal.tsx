@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { observeVisibleRange, placeModal, recentAnchorY } from '../utils/modalPlacement';
 import { Resource } from '../types';
 import { saveSubscriberEmail } from '../utils/emailGate';
 import { LinkIcon } from './icons';
@@ -45,11 +47,6 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       setIsSubmitting(false);
       // Prevent background scrolling when modal is open
       document.body.style.overflow = 'hidden';
-      
-      // Auto-scroll to center the modal in the viewport (highly beneficial for embedded iframe views)
-      setTimeout(() => {
-        modalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
     } else {
       document.body.style.overflow = 'auto';
     }
@@ -58,6 +55,56 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       document.body.style.overflow = 'auto';
     };
   }, [isOpen]);
+
+  // The embedded library is a tall iframe and the host page scrolls, so a fixed,
+  // centered panel lands in the middle of the catalog. Place the panel in document
+  // coordinates where the visitor tapped, kept inside the part of the frame on screen.
+  const [panelTop, setPanelTop] = useState<number | null>(null);
+  const [docHeight, setDocHeight] = useState(0);
+  const [maxPanelHeight, setMaxPanelHeight] = useState<number | null>(null);
+  const showing = isOpen && !!resource;
+
+  useLayoutEffect(() => {
+    if (!showing) { setPanelTop(null); return; }
+    const anchorY = recentAnchorY();
+    let visible: [number, number] | null = null;
+    let reported = false;
+    const place = () => {
+      const panel = modalRef.current;
+      if (!panel) return;
+      const height = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
+      setDocHeight(height);
+      const top = placeModal({
+        anchorY,
+        visibleTop: visible ? visible[0] : null,
+        visibleBottom: visible ? visible[1] : null,
+        panelHeight: panel.offsetHeight,
+        docHeight: height,
+      });
+      setPanelTop(top);
+      if (window.self !== window.top && !reported && visible) {
+        reported = true;
+        window.parent.postMessage({ type: 'bpm-library-modal', top }, '*');
+      }
+    };
+    place();
+    // Only the first report matters: once placed, the panel scrolls with the page like content.
+    let done = false;
+    const stop = observeVisibleRange((top, bottom) => {
+      if (done) return;
+      done = true;
+      visible = [top, bottom];
+      setMaxPanelHeight(Math.max(320, bottom - top - 32));
+      place();
+    });
+    const fallback = window.setTimeout(() => {
+      if (window.self !== window.top && !reported) {
+        reported = true;
+        window.parent.postMessage({ type: 'bpm-library-modal', top: modalRef.current?.offsetTop ?? 0 }, '*');
+      }
+    }, 300);
+    return () => { stop(); window.clearTimeout(fallback); };
+  }, [showing, isSubmitted]);
 
   if (!isOpen || !resource) return null;
 
@@ -311,18 +358,24 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     </>
   );
   
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 bg-[#13231a]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="absolute left-0 top-0 w-full bg-[#13231a]/70 backdrop-blur-sm z-50"
+      style={{ height: docHeight || '100%' }}
       onClick={onClose}
       aria-modal="true"
       role="dialog"
     >
       <div 
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative border border-gray-100 transform transition-all duration-300"
+        className="bg-white rounded-2xl shadow-2xl w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 absolute left-1/2 -translate-x-1/2 overflow-y-auto border border-gray-100"
         onClick={e => e.stopPropagation()}
-        style={{animation: 'fade-in-scale 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards'}}
+        style={{
+          top: panelTop ?? 0,
+          maxHeight: maxPanelHeight ?? undefined,
+          visibility: panelTop === null ? 'hidden' : 'visible',
+          animation: 'fade-in-scale 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        }}
       >
         <button 
           onClick={onClose} 
@@ -337,11 +390,12 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       </div>
        <style>{`
         @keyframes fade-in-scale {
-          from { opacity: 0; transform: scale(0.96); }
-          to { opacity: 1; transform: scale(1); }
+          from { opacity: 0; transform: translateX(-50%) scale(0.96); }
+          to { opacity: 1; transform: translateX(-50%) scale(1); }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 };
 
