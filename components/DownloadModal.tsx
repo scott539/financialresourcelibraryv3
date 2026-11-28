@@ -207,7 +207,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     <div className="text-center py-8 animate-fade-in-scale">
       <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">One more step</h2>
       <p className="text-gray-600 text-sm max-w-sm mx-auto mb-8 leading-relaxed">
-        Our email provider needs a quick check that you're a person before it adds you to the list.
+        Our email provider, Kit, needs a quick check that you're a person before it adds you to the list. The check opens in a new tab.
       </p>
       <div className="flex flex-col gap-3">
         <a
@@ -215,13 +215,14 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => { saveSubscriberEmail(email.trim()); setKitCheckUrl(null); setIsSubmitted(true); }}
-          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm"
+          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
         >
           Finish signing up
         </a>
         <button
           onClick={onClose}
-          className="w-full text-gray-500 hover:text-slate-900 font-semibold py-2 px-4 text-sm"
+          type="button"
+          className="w-full border border-line bg-white text-ink2 hover:text-primary hover:border-primary font-bold py-3.5 px-4 rounded-xl transition duration-300 text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
         >
           Back to Library
         </button>
