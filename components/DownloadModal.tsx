@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { observeVisibleRange, placeModal, recentAnchorY } from '../utils/modalPlacement';
 import { Resource } from '../types';
 import { saveSubscriberEmail } from '../utils/emailGate';
+import { subscribeToKit } from '../utils/kitSubscribe';
 import { LinkIcon } from './icons';
 
 interface DownloadModalProps {
@@ -14,9 +15,6 @@ interface DownloadModalProps {
   onGoogleDriveClick: (resourceId: string) => void;
   actionType?: 'download' | 'gdrive';
 }
-
-const CONVERTKIT_FORM_ID = '663c3a5c89'; // Kit "Nav Bar Signup", form id 8946340
-const CONVERTKIT_SUBMIT_URL = `https://app.convertkit.com/html_forms/${CONVERTKIT_FORM_ID}/subscriptions`;
 
 const DownloadModal: React.FC<DownloadModalProps> = ({ 
   resource, 
@@ -32,8 +30,9 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set when Kit holds the signup for its spam check: the visitor finishes it on Kit's page.
+  const [kitCheckUrl, setKitCheckUrl] = useState<string | null>(null);
 
-  const formRef = useRef<HTMLFormElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +44,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       setError('');
       setIsSubmitted(false);
       setIsSubmitting(false);
+      setKitCheckUrl(null);
       // Prevent background scrolling when modal is open
       document.body.style.overflow = 'hidden';
     } else {
@@ -104,7 +104,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       }
     }, 300);
     return () => { stop(); window.clearTimeout(fallback); };
-  }, [showing, isSubmitted]);
+  }, [showing, isSubmitted, kitCheckUrl]);
 
   if (!isOpen || !resource) return null;
 
@@ -131,17 +131,28 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     try {
       const lead = { firstName: firstName.trim(), email: email.trim(), hasConsented };
       
-      // 1. Submit the form to ConvertKit programmatically via our hidden iframe target
-      if (formRef.current) {
-        formRef.current.submit();
+      // 1. Send the signup to Kit and wait for its answer. Nothing below runs unless Kit took it.
+      const result = await subscribeToKit({
+        firstName: lead.firstName,
+        email: lead.email,
+        referrer: `${window.location.origin}/?resource=${encodeURIComponent(resource.id)}`,
+      });
+      if (result.status === 'failed') {
+        setError(result.message);
+        return;
       }
 
-      // 2. Save the subscriber email locally to remember their state
-      saveSubscriberEmail(email.trim());
-
-      // 3. Log the lead to Firebase Firestore (without downloading the file again)
+      // 2. Log the lead to Firebase Firestore (without downloading the file again)
       await onDownload(resource.id, lead, false);
 
+      if (result.status === 'quarantined') {
+        // Kit wants its spam check passed before it adds the address. Show the link to it.
+        setKitCheckUrl(result.url);
+        return;
+      }
+
+      // 3. Save the subscriber email locally to remember their state
+      saveSubscriberEmail(lead.email);
       setIsSubmitted(true);
     } catch (err) {
       console.error("Submission failed:", err);
@@ -192,6 +203,32 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     </div>
   );
 
+  const renderKitCheck = () => (
+    <div className="text-center py-8 animate-fade-in-scale">
+      <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">One more step</h2>
+      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-8 leading-relaxed">
+        Our email provider needs a quick check that you're a person before it adds you to the list.
+      </p>
+      <div className="flex flex-col gap-3">
+        <a
+          href={kitCheckUrl || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => { saveSubscriberEmail(email.trim()); setKitCheckUrl(null); setIsSubmitted(true); }}
+          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm"
+        >
+          Finish signing up
+        </a>
+        <button
+          onClick={onClose}
+          className="w-full text-gray-500 hover:text-slate-900 font-semibold py-2 px-4 text-sm"
+        >
+          Back to Library
+        </button>
+      </div>
+    </div>
+  );
+
   const renderForm = () => (
     <>
       <div className="text-center mb-6">
@@ -230,21 +267,12 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         </p>
       </div>
 
-      {/* Background program-post target iframe */}
-      <iframe name="ck-hidden-modal-iframe" style={{ display: 'none' }} title="ConvertKit Silencer" />
-
-      {/* Standard HTML Form targeting the silent background iframe */}
+      {/* The signup is sent to Kit by utils/kitSubscribe.ts, which reads Kit's answer. */}
       <form 
-        ref={formRef}
-        action={CONVERTKIT_SUBMIT_URL}
-        method="post"
-        target="ck-hidden-modal-iframe"
         onSubmit={handleSubmit}
         className="space-y-4"
         noValidate
       >
-        <input type="hidden" name="form_id" value={CONVERTKIT_FORM_ID} />
-        <input type="hidden" name="first_name" value={firstName} />
 
         <div>
           <label htmlFor="modalFirstName" className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -386,7 +414,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        {isSubmitted ? renderSuccess() : renderForm()}
+        {isSubmitted ? renderSuccess() : kitCheckUrl ? renderKitCheck() : renderForm()}
       </div>
        <style>{`
         @keyframes fade-in-scale {
