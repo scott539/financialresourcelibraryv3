@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { observeVisibleRange, placeModal, recentAnchorY } from '../utils/modalPlacement';
 import { Resource } from '../types';
 import { saveSubscriberEmail } from '../utils/emailGate';
+import { subscribeToKit } from '../utils/kitSubscribe';
 import { LinkIcon } from './icons';
 
 interface DownloadModalProps {
@@ -14,9 +15,6 @@ interface DownloadModalProps {
   onGoogleDriveClick: (resourceId: string) => void;
   actionType?: 'download' | 'gdrive';
 }
-
-const CONVERTKIT_FORM_ID = '663c3a5c89'; // Kit "Nav Bar Signup", form id 8946340
-const CONVERTKIT_SUBMIT_URL = `https://app.convertkit.com/html_forms/${CONVERTKIT_FORM_ID}/subscriptions`;
 
 const DownloadModal: React.FC<DownloadModalProps> = ({ 
   resource, 
@@ -32,8 +30,9 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set when Kit holds the signup for its spam check: the visitor finishes it on Kit's page.
+  const [kitCheckUrl, setKitCheckUrl] = useState<string | null>(null);
 
-  const formRef = useRef<HTMLFormElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +44,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       setError('');
       setIsSubmitted(false);
       setIsSubmitting(false);
+      setKitCheckUrl(null);
       // Prevent background scrolling when modal is open
       document.body.style.overflow = 'hidden';
     } else {
@@ -56,9 +56,13 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     };
   }, [isOpen]);
 
-  // The embedded library is a tall iframe and the host page scrolls, so a fixed,
-  // centered panel lands in the middle of the catalog. Place the panel in document
-  // coordinates where the visitor tapped, kept inside the part of the frame on screen.
+  // Opened directly (the Vercel app), the panel is a fixed dialog centered in the
+  // viewport and never taller than it. Inside the embed the library is a tall iframe
+  // and the host page scrolls, so a fixed, centered panel would land in the middle of
+  // the catalog. There the panel is placed in document coordinates, centered on the
+  // part of the frame that is on screen (or where the visitor tapped, until that part
+  // is known), and placed again whenever its content changes height.
+  const inFrame = typeof window !== 'undefined' && window.self !== window.top;
   const [panelTop, setPanelTop] = useState<number | null>(null);
   const [docHeight, setDocHeight] = useState(0);
   const [maxPanelHeight, setMaxPanelHeight] = useState<number | null>(null);
@@ -66,6 +70,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
 
   useLayoutEffect(() => {
     if (!showing) { setPanelTop(null); return; }
+    if (!inFrame) return;
     const anchorY = recentAnchorY();
     let visible: [number, number] | null = null;
     let reported = false;
@@ -75,7 +80,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       const height = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
       setDocHeight(height);
       const top = placeModal({
-        anchorY,
+        anchorY: visible ? null : anchorY,
         visibleTop: visible ? visible[0] : null,
         visibleBottom: visible ? visible[1] : null,
         panelHeight: panel.offsetHeight,
@@ -97,14 +102,17 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       setMaxPanelHeight(Math.max(320, bottom - top - 32));
       place();
     });
+    // The error line, or a switch between views, changes the panel's height after it was placed.
+    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => place());
+    if (resize && modalRef.current) resize.observe(modalRef.current);
     const fallback = window.setTimeout(() => {
       if (window.self !== window.top && !reported) {
         reported = true;
         window.parent.postMessage({ type: 'bpm-library-modal', top: modalRef.current?.offsetTop ?? 0 }, '*');
       }
     }, 300);
-    return () => { stop(); window.clearTimeout(fallback); };
-  }, [showing, isSubmitted]);
+    return () => { stop(); resize?.disconnect(); window.clearTimeout(fallback); };
+  }, [showing, inFrame, isSubmitted, kitCheckUrl]);
 
   if (!isOpen || !resource) return null;
 
@@ -131,17 +139,28 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     try {
       const lead = { firstName: firstName.trim(), email: email.trim(), hasConsented };
       
-      // 1. Submit the form to ConvertKit programmatically via our hidden iframe target
-      if (formRef.current) {
-        formRef.current.submit();
+      // 1. Send the signup to Kit and wait for its answer. Nothing below runs unless Kit took it.
+      const result = await subscribeToKit({
+        firstName: lead.firstName,
+        email: lead.email,
+        referrer: `${window.location.origin}/?resource=${encodeURIComponent(resource.id)}`,
+      });
+      if (result.status === 'failed') {
+        setError(result.message);
+        return;
       }
 
-      // 2. Save the subscriber email locally to remember their state
-      saveSubscriberEmail(email.trim());
-
-      // 3. Log the lead to Firebase Firestore (without downloading the file again)
+      // 2. Log the lead to Firebase Firestore (without downloading the file again)
       await onDownload(resource.id, lead, false);
 
+      if (result.status === 'quarantined') {
+        // Kit wants its spam check passed before it adds the address. Show the link to it.
+        setKitCheckUrl(result.url);
+        return;
+      }
+
+      // 3. Save the subscriber email locally to remember their state
+      saveSubscriberEmail(lead.email);
       setIsSubmitted(true);
     } catch (err) {
       console.error("Submission failed:", err);
@@ -158,7 +177,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">You're All Set!</h2>
+      <h2 className="text-2xl font-black text-ink tracking-tight mb-2">You're All Set!</h2>
       <p className="text-gray-600 text-sm max-w-sm mx-auto mb-8 leading-relaxed">
         {resource.isComingSoon 
           ? "We've added your email. We will notify you as soon as this brand new resource launches!"
@@ -182,9 +201,40 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             <span>Open in Google Drive</span>
           </a>
         )}
+        {/* The only control here unless the Drive link is shown, so it is the primary button then. */}
         <button 
+          type="button"
           onClick={onClose} 
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm"
+          className={actionType === 'gdrive' && resource.googleDriveUrl
+            ? "w-full border border-line bg-white text-ink2 hover:text-primary hover:border-primary font-bold py-3.5 px-4 rounded-xl transition duration-300 text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
+            : "w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm focus-visible:outline-primary focus-visible:outline-offset-2"}
+        >
+          Back to Library
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderKitCheck = () => (
+    <div className="text-center py-8 animate-fade-in-scale">
+      <h2 className="text-2xl font-black text-ink tracking-tight mb-2">One more step</h2>
+      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-8 leading-relaxed">
+        Our email provider, Kit, needs a quick check that you're a person before it adds you to the list. The check opens in a new tab.
+      </p>
+      <div className="flex flex-col gap-3">
+        <a
+          href={kitCheckUrl || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => { saveSubscriberEmail(email.trim()); setKitCheckUrl(null); setIsSubmitted(true); }}
+          className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
+        >
+          Finish signing up
+        </a>
+        <button
+          onClick={onClose}
+          type="button"
+          className="w-full border border-line bg-white text-ink2 hover:text-primary hover:border-primary font-bold py-3.5 px-4 rounded-xl transition duration-300 text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
         >
           Back to Library
         </button>
@@ -195,19 +245,19 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const renderForm = () => (
     <>
       <div className="text-center mb-6">
-        {/* Resource Mini Card Preview to visually hook the user */}
-        <div className="flex items-center gap-4 p-3 bg-slate-50 border border-slate-100 rounded-2xl mb-6 text-left">
+        {/* Resource Mini Card Preview to visually hook the user. The top margin keeps it clear of the close button. */}
+        <div className="flex items-center gap-4 p-3 bg-card border border-line2 rounded-2xl mt-7 sm:mt-5 mb-6 text-left">
           <img 
             src={resource.imageUrl} 
             alt={resource.title} 
-            className="w-14 h-14 object-cover rounded-xl shadow-sm border border-slate-200/60 flex-shrink-0"
+            className="w-14 h-14 object-cover rounded-xl shadow-sm border border-line flex-shrink-0"
             referrerPolicy="no-referrer"
           />
           <div className="min-w-0">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary mb-1">
               {resource.isComingSoon ? 'Sign Up' : resource.isOpenDirectly ? 'Web App / Calculator' : actionType === 'gdrive' ? 'Google Drive Link' : 'Instant Download'}
             </span>
-            <h3 className="font-bold text-slate-900 text-sm truncate leading-tight">{resource.title}</h3>
+            <h3 className="font-bold text-ink text-sm truncate leading-tight">{resource.title}</h3>
             <p className="text-gray-500 text-xs truncate mt-0.5">{resource.category}</p>
           </div>
         </div>
@@ -220,7 +270,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           </div>
         )}
         
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1.5">
+        <h2 className="text-2xl font-black text-ink tracking-tight mb-1.5">
           {resource.isComingSoon ? 'Get notified when this launches' : 'Want to stay updated on this resource?'}
         </h2>
         <p className="text-gray-500 text-xs leading-relaxed max-w-sm mx-auto">
@@ -230,24 +280,15 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         </p>
       </div>
 
-      {/* Background program-post target iframe */}
-      <iframe name="ck-hidden-modal-iframe" style={{ display: 'none' }} title="ConvertKit Silencer" />
-
-      {/* Standard HTML Form targeting the silent background iframe */}
+      {/* The signup is sent to Kit by utils/kitSubscribe.ts, which reads Kit's answer. */}
       <form 
-        ref={formRef}
-        action={CONVERTKIT_SUBMIT_URL}
-        method="post"
-        target="ck-hidden-modal-iframe"
         onSubmit={handleSubmit}
         className="space-y-4"
         noValidate
       >
-        <input type="hidden" name="form_id" value={CONVERTKIT_FORM_ID} />
-        <input type="hidden" name="first_name" value={firstName} />
 
         <div>
-          <label htmlFor="modalFirstName" className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label htmlFor="modalFirstName" className="block text-xs font-bold text-ink mb-1.5">
             First Name
           </label>
           <input
@@ -257,14 +298,14 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="e.g. Scott"
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm text-slate-800 disabled:bg-gray-50 font-medium"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm text-ink disabled:bg-gray-50 font-medium"
             required
             disabled={isSubmitting}
           />
         </div>
 
         <div>
-          <label htmlFor="modalEmail" className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label htmlFor="modalEmail" className="block text-xs font-bold text-ink mb-1.5">
             Email Address
           </label>
           <input
@@ -274,7 +315,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="e.g. scott@biggerpocketsmoney.com"
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm text-slate-800 disabled:bg-gray-50 font-medium"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition text-sm text-ink disabled:bg-gray-50 font-medium"
             required
             disabled={isSubmitting}
           />
@@ -344,13 +385,13 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             saveSubscriberEmail('anonymous@subscriber.direct');
             onClose();
           }}
-          className="hover:text-slate-900 underline focus:outline-none transition-colors"
+          className="hover:text-ink underline focus:outline-none transition-colors"
         >
           No thanks, just close
         </button>
         <button 
           onClick={onClose}
-          className="hover:text-slate-900 focus:outline-none transition-colors"
+          className="hover:text-ink focus:outline-none transition-colors"
         >
           Cancel
         </button>
@@ -358,6 +399,55 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     </>
   );
   
+  const closeButton = (
+    <button 
+      onClick={onClose} 
+      className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition duration-200"
+      aria-label="Close modal"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  );
+  const body = isSubmitted ? renderSuccess() : kitCheckUrl ? renderKitCheck() : renderForm();
+  const keyframes = (
+    <style>{`
+      @keyframes fade-in-scale {
+        from { opacity: 0; transform: translateX(-50%) scale(0.96); }
+        to { opacity: 1; transform: translateX(-50%) scale(1); }
+      }
+      @keyframes fade-in-scale-centered {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+      }
+    `}</style>
+  );
+
+  if (!inFrame) {
+    // Centered in the viewport, 1rem clear of every edge; tall content scrolls inside the panel.
+    return createPortal(
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#13231a]/70 backdrop-blur-sm"
+        onClick={onClose}
+        aria-modal="true"
+        role="dialog"
+      >
+        <div
+          ref={modalRef}
+          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-full p-6 sm:p-8 overflow-y-auto overscroll-contain border border-gray-100"
+          onClick={e => e.stopPropagation()}
+          style={{ animation: 'fade-in-scale-centered 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+        >
+          {closeButton}
+          {body}
+        </div>
+        {keyframes}
+      </div>,
+      document.body
+    );
+  }
+
   return createPortal(
     <div 
       className="absolute left-0 top-0 w-full bg-[#13231a]/70 backdrop-blur-sm z-50"
@@ -368,7 +458,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     >
       <div 
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 absolute left-1/2 -translate-x-1/2 overflow-y-auto border border-gray-100"
+        className="bg-white rounded-2xl shadow-2xl w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 absolute left-1/2 -translate-x-1/2 overflow-y-auto overscroll-contain border border-gray-100"
         onClick={e => e.stopPropagation()}
         style={{
           top: panelTop ?? 0,
@@ -377,23 +467,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           animation: 'fade-in-scale 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}
       >
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition duration-200"
-          aria-label="Close modal"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        {isSubmitted ? renderSuccess() : renderForm()}
+        {closeButton}
+        {body}
       </div>
-       <style>{`
-        @keyframes fade-in-scale {
-          from { opacity: 0; transform: translateX(-50%) scale(0.96); }
-          to { opacity: 1; transform: translateX(-50%) scale(1); }
-        }
-      `}</style>
+      {keyframes}
     </div>,
     document.body
   );
