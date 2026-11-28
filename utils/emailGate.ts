@@ -64,3 +64,38 @@ export const checkUrlForEmail = (): void => {
     console.error("Error checking URL for email query param", error);
   }
 };
+
+// A signup Kit held for its spam check. It is not a subscription: the library still shows the
+// email form, and only prefills it, so a visitor who comes back can send it again in one tap.
+export const PENDING_SIGNUP_KEY = 'financial_library_pending_signup';
+
+export interface PendingSignup { firstName: string; email: string; }
+
+export const savePendingSignup = (signup: PendingSignup): void => {
+  if (!signup.email || !isValidEmail(signup.email)) return;
+  try {
+    localStorage.setItem(PENDING_SIGNUP_KEY, JSON.stringify({ firstName: signup.firstName, email: signup.email }));
+  } catch (error) {
+    console.error("Could not save pending signup to localStorage", error);
+  }
+};
+
+export const getPendingSignup = (): PendingSignup | null => {
+  try {
+    const raw = localStorage.getItem(PENDING_SIGNUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.email !== 'string' || !isValidEmail(parsed.email)) return null;
+    return { firstName: typeof parsed.firstName === 'string' ? parsed.firstName : '', email: parsed.email };
+  } catch {
+    return null;
+  }
+};
+
+export const clearPendingSignup = (): void => {
+  try {
+    localStorage.removeItem(PENDING_SIGNUP_KEY);
+  } catch (error) {
+    console.error("Could not clear pending signup from localStorage", error);
+  }
+};
