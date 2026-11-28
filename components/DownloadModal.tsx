@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { observeVisibleRange, placeModal, recentAnchorY } from '../utils/modalPlacement';
 import { Resource } from '../types';
-import { saveSubscriberEmail } from '../utils/emailGate';
+import { clearPendingSignup, getPendingSignup, savePendingSignup, saveSubscriberEmail } from '../utils/emailGate';
 import { subscribeToKit } from '../utils/kitSubscribe';
+import { createModalSession, openKitCheck, submitSignup, SignupView } from '../utils/signupFlow';
 import { LinkIcon } from './icons';
 
 interface DownloadModalProps {
@@ -27,24 +28,25 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [hasConsented, setHasConsented] = useState(true); // Default to consented for better UX
-  const [error, setError] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [view, setView] = useState<SignupView>({ name: 'form', error: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Set when Kit holds the signup for its spam check: the visitor finishes it on Kit's page.
-  const [kitCheckUrl, setKitCheckUrl] = useState<string | null>(null);
+  const error = view.name === 'form' ? view.error : '';
+  const setError = (message: string) => setView({ name: 'form', error: message });
 
   const modalRef = useRef<HTMLDivElement>(null);
+  // A Kit reply stamped with an older session belongs to a modal that was closed or reopened.
+  const session = useRef(createModalSession()).current;
 
   useEffect(() => {
+    session.begin();
     if (isOpen) {
-      // Reset form state when modal opens
-      setFirstName('');
-      setEmail('');
+      // Reset form state when modal opens. A signup Kit held for its check only prefills the form.
+      const pending = getPendingSignup();
+      setFirstName(pending?.firstName ?? '');
+      setEmail(pending?.email ?? '');
       setHasConsented(true);
-      setError('');
-      setIsSubmitted(false);
+      setView({ name: 'form', error: '' });
       setIsSubmitting(false);
-      setKitCheckUrl(null);
       // Prevent background scrolling when modal is open
       document.body.style.overflow = 'hidden';
     } else {
@@ -54,7 +56,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [isOpen]);
+  }, [isOpen, resource?.id]);
 
   // Opened directly (the Vercel app), the panel is a fixed dialog centered in the
   // viewport and never taller than it. Inside the embed the library is a tall iframe
@@ -112,7 +114,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       }
     }, 300);
     return () => { stop(); resize?.disconnect(); window.clearTimeout(fallback); };
-  }, [showing, inFrame, isSubmitted, kitCheckUrl]);
+  }, [showing, inFrame, view.name]);
 
   if (!isOpen || !resource) return null;
 
@@ -135,38 +137,32 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     
     setError('');
     setIsSubmitting(true);
-    
+    const stamp = session.stamp();
+    const isCurrent = () => session.isCurrent(stamp);
+    const lead = { firstName: firstName.trim(), email: email.trim(), hasConsented };
+    const resourceId = resource.id;
+
     try {
-      const lead = { firstName: firstName.trim(), email: email.trim(), hasConsented };
-      
-      // 1. Send the signup to Kit and wait for its answer. Nothing below runs unless Kit took it.
-      const result = await subscribeToKit({
-        firstName: lead.firstName,
-        email: lead.email,
-        referrer: `${window.location.origin}/?resource=${encodeURIComponent(resource.id)}`,
+      // Kit's answer decides the view. Nothing is remembered as subscribed unless Kit took it,
+      // and a reply that lands after the modal moved on changes nothing on screen.
+      await submitSignup({
+        subscribe: () => subscribeToKit({
+          firstName: lead.firstName,
+          email: lead.email,
+          referrer: `${window.location.origin}/?resource=${encodeURIComponent(resourceId)}`,
+        }),
+        logLead: () => onDownload(resourceId, lead, false),
+        rememberSubscriber: () => saveSubscriberEmail(lead.email),
+        rememberPending: () => savePendingSignup({ firstName: lead.firstName, email: lead.email }),
+        clearPending: clearPendingSignup,
+        isCurrent,
+        show: setView,
       });
-      if (result.status === 'failed') {
-        setError(result.message);
-        return;
-      }
-
-      // 2. Log the lead to Firebase Firestore (without downloading the file again)
-      await onDownload(resource.id, lead, false);
-
-      if (result.status === 'quarantined') {
-        // Kit wants its spam check passed before it adds the address. Show the link to it.
-        setKitCheckUrl(result.url);
-        return;
-      }
-
-      // 3. Save the subscriber email locally to remember their state
-      saveSubscriberEmail(lead.email);
-      setIsSubmitted(true);
     } catch (err) {
       console.error("Submission failed:", err);
-      setError("An unexpected error occurred. Please try again.");
+      if (isCurrent()) setError("An unexpected error occurred. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      if (isCurrent()) setIsSubmitting(false);
     }
   };
 
@@ -215,6 +211,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     </div>
   );
 
+  const checkUrl = view.name === 'kitCheck' || view.name === 'checkEmail' ? view.url : undefined;
+
   const renderKitCheck = () => (
     <div className="text-center py-8 animate-fade-in-scale">
       <h2 className="text-2xl font-black text-ink tracking-tight mb-2">One more step</h2>
@@ -223,10 +221,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       </p>
       <div className="flex flex-col gap-3">
         <a
-          href={kitCheckUrl || undefined}
+          href={checkUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => { saveSubscriberEmail(email.trim()); setKitCheckUrl(null); setIsSubmitted(true); }}
+          onClick={() => openKitCheck(view, setView)}
           className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
         >
           Finish signing up
@@ -238,6 +236,54 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         >
           Back to Library
         </button>
+      </div>
+    </div>
+  );
+
+  // After the visitor opens Kit's check. This page never hears how the check went, so the copy
+  // only says what is left to do, and the visitor is not remembered as subscribed.
+  const renderCheckEmail = () => (
+    <div className="text-center py-8 animate-fade-in-scale">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-card text-primary mb-6 border border-line shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 7l9 6 9-6" />
+        </svg>
+      </div>
+      <h2 className="text-2xl font-black text-ink tracking-tight mb-2">Check your email to finish signing&nbsp;up</h2>
+      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-8 leading-relaxed">
+        Once you pass Kit's check in the new tab, Kit emails you a link to confirm. You're on the list after you click it.
+      </p>
+      <div className="flex flex-col gap-3">
+        {actionType === 'gdrive' && resource.googleDriveUrl && (
+          <a
+            href={resource.googleDriveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => onGoogleDriveClick(resource.id)}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm flex items-center justify-center gap-2 text-sm"
+          >
+            <LinkIcon className="w-4 h-4" />
+            <span>Open in Google Drive</span>
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className={actionType === 'gdrive' && resource.googleDriveUrl
+            ? "w-full border border-line bg-white text-ink2 hover:text-primary hover:border-primary font-bold py-3.5 px-4 rounded-xl transition duration-300 text-sm focus-visible:outline-primary focus-visible:outline-offset-2"
+            : "w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-sm text-sm focus-visible:outline-primary focus-visible:outline-offset-2"}
+        >
+          Back to Library
+        </button>
+        <a
+          href={checkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-gray-500 underline hover:text-primary py-2"
+        >
+          Closed the tab? Open Kit's check again
+        </a>
       </div>
     </div>
   );
@@ -410,7 +456,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       </svg>
     </button>
   );
-  const body = isSubmitted ? renderSuccess() : kitCheckUrl ? renderKitCheck() : renderForm();
+  const body = view.name === 'done' ? renderSuccess()
+    : view.name === 'kitCheck' ? renderKitCheck()
+    : view.name === 'checkEmail' ? renderCheckEmail()
+    : renderForm();
   const keyframes = (
     <style>{`
       @keyframes fade-in-scale {
